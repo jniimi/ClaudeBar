@@ -24,6 +24,10 @@
 #        DEMO_SCENE=sections  adds Oh My Pi, read by its own script: a Claude
 #                           and a Kimi section, then today's usage from the
 #                           same sample logs
+#        DEMO_SCENE=cloudflare  adds Cloudflare AI, run by its own definition's
+#                           steps and script against the stub: neurons today,
+#                           the Workers Paid overage, tokens, AI Gateway and
+#                           an invoice, all made up
 #        DEMO_SCENE=sessions  hooks on in the demo home, and six made-up Claude
 #                           Code sessions posted to the hook server: one needs
 #                           you, one with agents, four done (three in one repo),
@@ -36,12 +40,25 @@
 #                           extraLarge), set in the demo home's settings
 #        DEMO_POPOVER_TITLE="Acme AI Desk"  the Popover Title, set the same way
 #        DEMO_OPENS_ON=all  the popover opens on the All page (Open On)
-#        (the app defaults to the newest Debug build in DerivedData)
+#        (the app defaults to the newest Debug build in DerivedData that
+#        carries every provider definition in Modules/Providers)
 
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-APP="${1:-$(ls -td ~/Library/Developer/Xcode/DerivedData/ClaudeBar-*/Build/Products/Debug/ClaudeBar.app 2>/dev/null | head -1)}"
+# The newest Debug app built from these definitions: another DerivedData
+# folder can hold a newer app built before a provider was added.
+newest_app() {
+    local app file ok
+    for app in $(ls -td ~/Library/Developer/Xcode/DerivedData/ClaudeBar-*/Build/Products/Debug/ClaudeBar.app 2>/dev/null); do
+        ok=1
+        for file in Modules/Providers/Resources/Providers/*; do
+            ls "$app"/Contents/Resources/*_Providers.bundle/Contents/Resources/"$(basename "$file")" >/dev/null 2>&1 || { ok=0; break; }
+        done
+        if [[ $ok == 1 ]]; then echo "$app"; return; fi
+    done
+}
+APP="${1:-$(newest_app)}"
 THEME="${2:-light}"
 DEMO_HOME="${DEMO_HOME:-${TMPDIR:-/tmp}/claudebar-screenshots}"
 PORT="${DEMO_PORT:-47814}"
@@ -120,6 +137,25 @@ ids = [
 if scene == "sections":
     # omp's own script groups each upstream provider's limits into a section.
     ids.append(provider("f", "omp", [], history, {"script": {"file": "omp-usage.js"}}))
+
+if scene == "cloudflare":
+    # The built-in's own steps and script, asking the stub instead of Cloudflare.
+    with open("Modules/Providers/Resources/Providers/cloudflare-ai.json") as f:
+        builtin = json.load(f)
+    source = builtin["dataSources"][0]
+    for step in source["fetch"]["http"]["steps"]:
+        request = step["request"]
+        request["url"] = request["url"].replace("https://api.cloudflare.com/client/v4", f"{base}/cf")
+    # Its own token lookup stays, so Settings shows the token field; the
+    # launch below sets CLOUDFLARE_API_TOKEN to a made-up token.
+    name, face = look("cloudflare-ai")
+    pid = "custom-g-cloudflare-ai"
+    with open(f"{home}/.claudebar/providers/{pid}.json", "w") as f:
+        # Its settings too, so Settings shows the token field (left empty).
+        json.dump({"profile": {"id": pid, "name": name, "origin": "custom", "links": {}, "look": face},
+                   "settings": builtin["settings"],
+                   "dataSources": [source], "defaultDataSource": source["kind"]}, f, indent=2)
+    ids.append(pid)
 
 # 30 days of sample Claude usage: weekdays busier, a few sessions a day.
 random.seed(7)
@@ -205,7 +241,34 @@ ANSWERS = {
         {"provider": "kimi-code", "limits": [limit("5h", 5 * H, 0.90, 2 * H), limit("7d", 7 * D, 0.64, 4 * D)]},
     ]},
 }
+# Cloudflare AI: this month so far, a few days past the free 10k neurons.
+today = time.gmtime()
+month = time.strftime("%Y-%m", today)
+days = []
+for d in range(1, today.tm_mday + 1):
+    date = f"{month}-{d:02d}"
+    for model, neurons, tin, tout in (("@cf/meta/llama-3.1-8b-instruct", 6000 + 900 * (d % 5), 420000, 95000),
+                                      ("@cf/baai/bge-m3", 1500 + 2600 * (d % 3), 380000, 0),
+                                      ("@cf/black-forest-labs/flux-1-schnell", 800 * (d % 4), 2000, 0)):
+        days.append({"dimensions": {"date": date, "modelId": model},
+                     "sum": {"totalNeurons": neurons, "totalInputTokens": tin, "totalOutputTokens": tout}})
+ANSWERS.update({
+    "cf/accounts": {"success": True, "result": [{"id": "demo-account", "name": "Demo"}]},
+    "cf/graphql": {"data": {"viewer": {"accounts": [{
+        "today": [{"sum": {"totalNeurons": 6300}}],
+        "days": days,
+        "gateway": [
+            {"dimensions": {"provider": "openai", "model": "gpt-5-mini"}, "sum": {"cost": 3.84, "tokensIn": 1840000, "tokensOut": 260000}},
+            {"dimensions": {"provider": "google-ai-studio", "model": "gemini-3.5-flash"}, "sum": {"cost": 0.92, "tokensIn": 910000, "tokensOut": 140000}},
+        ]}]}}, "errors": None},
+    "cf/accounts/demo-account/subscriptions": {"success": True, "result": [{"rate_plan": {"id": "workers_paid", "public_name": "Workers Paid"}}]},
+    "cf/accounts/demo-account/billing/history?per_page=1": {"success": True, "result": [
+        {"type": "invoice", "occurred_at": "2026-09-21T03:00:00Z", "amount_to_pay": 7.48, "currency": "usd", "status": "CLOSED"}]},
+})
 class Handler(http.server.BaseHTTPRequestHandler):
+    def do_POST(self):
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        self.do_GET()
     def do_GET(self):
         answer = ANSWERS.get(self.path.strip("/")) or ANSWERS.get(self.path.strip("/").split("?")[0])
         if answer is None:
@@ -224,4 +287,5 @@ if [[ "${DEMO_SCENE:-}" == "sessions" && "$(cat "$HOME/.claude/claudebar-hook-po
     echo "Your own Claude Code sessions will show up too; see DEMO_SCENE=sessions above."
 fi
 echo "Running $APP — quit ClaudeBar to end the demo."
+if [[ "${DEMO_SCENE:-}" == "cloudflare" ]]; then export CLOUDFLARE_API_TOKEN=demo-token; fi
 CFFIXED_USER_HOME="$DEMO_HOME" HOME="$DEMO_HOME" "$APP/Contents/MacOS/ClaudeBar"

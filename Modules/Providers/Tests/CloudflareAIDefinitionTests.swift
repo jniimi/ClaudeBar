@@ -93,6 +93,13 @@ struct CloudflareAIDefinitionTests {
         #expect(cloudflare.definition.profile.links.status == URL(string: "https://www.cloudflarestatus.com"))
     }
 
+    @Test
+    func `should ask for the API token in Settings, and in Add Account for another account`() throws {
+        let definition = try ProviderFactory.builtIn("cloudflare-ai")
+        #expect(definition.defaultLoginSettings.map(\.id) == ["apiToken", "authEnvVar"])
+        #expect(definition.accounts?.ways == [.form])
+    }
+
     @Test(.needsScriptEngine)
     func `should ask about the account the token sees, from today's and this month's start in UTC`() async throws {
         let seen = Seen()
