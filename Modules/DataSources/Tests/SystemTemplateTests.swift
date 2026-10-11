@@ -9,7 +9,7 @@ import FoundationNetworking
 
 /// `{{system.x}}` — values the engine computes, from the fetch's `now`
 /// (ENGINE_DESIGN §2.9): the time zone, the OS version, now, and a day
-/// N days away at UTC midnight.
+/// N days away and the first of this month, at UTC midnight.
 @Suite
 struct SystemTemplateTests {
     /// 2026-10-05 14:30:00 UTC.
@@ -41,7 +41,13 @@ struct SystemTemplateTests {
         #expect(Template.fill("{{system.day.date}}", with: nil, system: system) == "2026-10-05")
     }
 
-    @Test(arguments: ["system.day-x.epoch", "system.now.week", "system.unknown", "system.day-29"])
+    @Test
+    func `should send the first of this month, at UTC midnight`() {
+        #expect(Template.fill("{{system.month.date}}", with: nil, system: system) == "2026-10-01")
+        #expect(Template.fill("{{system.month.iso8601}}", with: nil, system: system) == "2026-10-01T00:00:00Z")
+    }
+
+    @Test(arguments: ["system.day-x.epoch", "system.now.week", "system.unknown", "system.day-29", "system.month", "system.month-1.date"])
     func `should leave a request unfilled when it names a value the engine doesn't compute`(_ name: String) {
         #expect(Template.fill("{{\(name)}}", with: nil, system: system) == nil)
     }

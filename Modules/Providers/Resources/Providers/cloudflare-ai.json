@@ -1,0 +1,84 @@
+{
+  "profile": {
+    "id": "cloudflare-ai",
+    "name": "Cloudflare AI",
+    "links": {
+      "dashboard": "https://dash.cloudflare.com/?to=/:account/ai/workers-ai",
+      "status": "https://www.cloudflarestatus.com"
+    },
+    "look": {
+      "symbol": "cloud.fill",
+      "color": { "light": [0.96, 0.51, 0.13], "dark": [0.98, 0.6, 0.25] },
+      "gradientEnd": { "light": [0.85, 0.36, 0.05], "dark": [0.9, 0.45, 0.12] }
+    }
+  },
+  "enabledByDefault": false,
+  "order": 280,
+  "settings": [
+    { "id": "apiToken", "label": "API token", "kind": "secret", "scope": "account" },
+    { "id": "authEnvVar", "label": "Environment variable", "default": "CLOUDFLARE_API_TOKEN" }
+  ],
+  "defaultDataSource": "api",
+  "dataSources": [
+    {
+      "kind": "api",
+      "label": "API",
+      "summary": "Reads Workers AI neurons and tokens, AI Gateway spend and the bill with a read-only API token",
+      "credential": { "firstOf": [ { "environment": "{{setting.authEnvVar}}" }, { "setting": "apiToken" } ] },
+      "fetch": {
+        "http": {
+          "steps": [
+            {
+              "name": "accounts",
+              "request": {
+                "url": "https://api.cloudflare.com/client/v4/accounts",
+                "headers": { "Authorization": "Bearer {{token}}", "Accept": "application/json" },
+                "timeout": 15
+              },
+              "keep": { "accountId": "$.result.0.id" }
+            },
+            {
+              "name": "usage",
+              "request": {
+                "url": "https://api.cloudflare.com/client/v4/graphql",
+                "method": "POST",
+                "headers": { "Authorization": "Bearer {{token}}", "Content-Type": "application/json", "Accept": "application/json" },
+                "body": "{\"query\":\"query($accountTag: String!, $day: Time!, $month: Date!) { viewer { accounts(filter: {accountTag: $accountTag}) { today: aiInferenceAdaptiveGroups(limit: 1, filter: {datetime_geq: $day}) { sum { totalNeurons } } days: aiInferenceAdaptiveGroups(limit: 10000, filter: {date_geq: $month}, orderBy: [date_ASC]) { dimensions { date modelId } sum { totalNeurons totalInputTokens totalOutputTokens } } gateway: aiGatewayRequestsAdaptiveGroups(limit: 10000, filter: {date_geq: $month}) { dimensions { provider model } sum { tokensIn tokensOut cost } } } } }\",\"variables\":{\"accountTag\":\"{{accountId}}\",\"day\":\"{{system.day.iso8601}}\",\"month\":\"{{system.month.date}}\"}}",
+                "timeout": 20
+              }
+            },
+            {
+              "name": "plan",
+              "optional": true,
+              "request": {
+                "url": "https://api.cloudflare.com/client/v4/accounts/{{accountId}}/subscriptions",
+                "headers": { "Authorization": "Bearer {{token}}", "Accept": "application/json" },
+                "timeout": 15,
+                "acceptedStatuses": [200, 400, 401, 403]
+              }
+            },
+            {
+              "name": "bills",
+              "optional": true,
+              "request": {
+                "url": "https://api.cloudflare.com/client/v4/accounts/{{accountId}}/billing/history?per_page=1",
+                "headers": { "Authorization": "Bearer {{token}}", "Accept": "application/json" },
+                "timeout": 15,
+                "acceptedStatuses": [200, 400, 401, 403]
+              }
+            }
+          ]
+        }
+      },
+      "mapping": { "script": { "file": "cloudflare-ai-usage.js" } },
+      "errors": {
+        "http.400": { "sessionExpired": "Use a Cloudflare API token with Account Analytics: Read." },
+        "http.401": { "sessionExpired": "Use a Cloudflare API token with Account Analytics: Read." },
+        "http.403": { "sessionExpired": "Use a Cloudflare API token with Account Analytics: Read." }
+      }
+    }
+  ],
+  "accounts": {
+    "patch": { "api": { "credential": { "firstOf": null, "setting": "apiToken" } } }
+  }
+}

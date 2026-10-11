@@ -40,6 +40,15 @@ struct SystemValues: Sendable {
             guard let day = utc.date(byAdding: .day, value: days, to: utc.startOfDay(for: system.now)) else { return nil }
             return format.text(day)
         },
+        // `month.<format>`: the first of this month, at UTC midnight.
+        { system, name in
+            let parts = name.split(separator: ".", omittingEmptySubsequences: false)
+            guard parts.count == 2, parts[0] == "month", let format = Format(rawValue: String(parts[1])) else { return nil }
+            var utc = Calendar(identifier: .gregorian)
+            utc.timeZone = TimeZone(identifier: "UTC")!
+            guard let first = utc.dateInterval(of: .month, for: system.now)?.start else { return nil }
+            return format.text(first)
+        },
     ]
 
     private enum Format: String {

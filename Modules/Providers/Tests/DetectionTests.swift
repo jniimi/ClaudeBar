@@ -32,7 +32,8 @@ struct DetectionTests {
         let ids = detect().map(\.id)
         #expect(ids == ["claude", "codex", "gemini", "antigravity", "zai", "copilot", "bedrock", "ampcode", "kimi", "kiro",
                         "cursor", "minimax", "deepseek", "openrouter", "vercel-gateway", "alibaba", "mistral", "opencode-go",
-                        "omp", "grok", "commandcode", "cline", "warp", "devin", "windsurf", "jetbrains", "openai"])
+                        "omp", "grok", "commandcode", "cline", "warp", "devin", "windsurf", "jetbrains", "openai",
+                        "cloudflare-ai"])
         #expect(detect().allSatisfy { $0.profile.origin == .builtIn })
     }
 

@@ -58,6 +58,7 @@ Or download the signed and notarized DMG from [Releases](https://github.com/tddw
 | Windsurf | Daily and weekly quota, or message and flow-action allowances | [docs](docs/providers/windsurf/README.md) |
 | JetBrains AI | Monthly AI credits from your IDE | [docs](docs/providers/jetbrains/README.md) |
 | OpenAI API | Organization spend over the last 30 days, per line item | [docs](docs/providers/openai/README.md) |
+| Cloudflare AI | Workers AI neurons against 10k a day, Workers AI and AI Gateway tokens, the Workers Paid overage and the last invoice | [docs](docs/providers/cloudflare-ai/README.md) |
 | Your own | Anything a script can print, via `~/.claudebar/extensions/` | [docs](docs/features/extensions/README.md) |
 
 ## What It Covers

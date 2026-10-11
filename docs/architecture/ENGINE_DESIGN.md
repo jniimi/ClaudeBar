@@ -38,6 +38,7 @@ needs; each became a generic piece, never a vendor type:
 | a file in a folder named by version, across several apps (JetBrains IDEs) | a `*` in any path, a path as a list, the most recently changed match — `Paths` |
 | a row of an app's own database as the answer (Windsurf) | `fetch.sqlite` over `ReadOnlyQuery`, shared with the `sqlite` key lookup |
 | a sign-in a browser keeps in local storage (Devin) | `browserStorage`, every value from one profile, behind `BrowserStorageReading` |
+| a GraphQL read scoped to the account the token sees, from this month's start; a refused billing step that must not stop the usage (Cloudflare AI) | `{{system.month.<format>}}`; `http.steps` with `keep` and a POST body; `acceptedStatuses` on an optional step, so the script reads the refusal |
 | a key exported only in the login shell (Z.ai, #170) | `"loginShell": true` on an `environment` lookup — the engine's login-shell port, asked only by a lookup that says so |
 | a variable name the person chose (DeepSeek) | a setting with a default, `{{setting.authEnvVar}}` in the lookup — a blank one means the default |
 
@@ -382,7 +383,8 @@ both sides of a data source, the key and the fetch:
 
 Values the engine computes, made with the fetch's `now`, one row per name:
 `system.timeZone`, `system.osVersion`, `system.now.<format>`,
-`system.day±N.<format>` (UTC midnight, N days away); formats `epoch` ·
+`system.day±N.<format>` (UTC midnight, N days away), `system.month.<format>`
+(the first of this month, UTC midnight); formats `epoch` ·
 `iso8601` · `date` (`yyyy-MM-dd`). `Template` looks a `system.` name up; a
 new value is a new row, never a branch. HTTP fills them in its URL, headers
 and body; elsewhere a `system.` name stays unfilled.
@@ -395,6 +397,7 @@ DataSources.make(now:) ──► HTTPFetcher ──► SystemValues(now)
                                               system.now.epoch     → 1791210600
                                               system.day-29.epoch  → UTC midnight 29 days ago
                                               system.day-29.date   → "2026-09-06"
+                                              system.month.date    → "2026-10-01"
 Template.fill("start_time={{system.day-29.epoch}}")
    ├─ system.* ? ──► SystemValues[name]       (never taken from the credential)
    └─ otherwise ──► credential[name]          (unchanged)
