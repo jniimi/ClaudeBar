@@ -156,6 +156,30 @@ struct LeaderboardHTTPClientTests {
         #expect(summary.days.count == 1)
     }
 
+    /// Settings' *Export…* saves what `/me/export` answers: every row each
+    /// device ever uploaded, with what the app itself doesn't read, such as
+    /// the device that sent a row. The bytes are kept as the server sent them.
+    @Test func `should read the member's whole export, signed, and keep its bytes as the server sent them`() async throws {
+        var sent: URLRequest?
+        let body = #"{"username":"tokenwhale","visible":true,"days":[{"provider":"claude","day":"2025-01-02","input":1,"output":2,"cacheWrite":0,"cacheRead":3,"unsplit":0,"device":"k1"}],"devices":[{"publicKey":"k1","label":"MacBook Pro","addedAt":"2025-01-01T08:00:00.000Z","removedAt":null,"removedBy":null}],"notReadByTheApp":{"kept":true}}"#
+
+        let exported = try await client(body: body, sent: { sent = $0 }).export(as: member)
+
+        let request = try #require(sent)
+        #expect(request.httpMethod == "GET")
+        #expect(request.url?.path == "/me/export" && request.url?.query == nil)
+        #expect(try isSigned(request, by: key))
+        #expect(exported == Data(body.utf8))
+    }
+
+    /// A `2xx` that isn't JSON, such as a captive portal's page, is not the
+    /// member's data, so it isn't handed on to be saved as if it were.
+    @Test func `should refuse an export that isn't JSON, rather than hand it on to be saved`() async throws {
+        await #expect(throws: LeaderboardError.rejected("The leaderboard answered with something unreadable.")) {
+            _ = try await client(body: "<html>Sign in to the Wi-Fi</html>").export(as: member)
+        }
+    }
+
     @Test func `should read the board fresh and unsigned`() async throws {
         var sent: URLRequest?
         let body = #"{"period":"today","provider":null,"standings":[{"rank":1,"username":"big","total":1000,"input":500,"output":0,"cache":500,"byProvider":{"claude":1000}}]}"#

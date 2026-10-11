@@ -283,6 +283,14 @@ public final class LeaderboardMembership {
         return summary
     }
 
+    /// Everything the server holds about the member, `/me/export`, as the
+    /// server sent it: what Settings' *Export…* saves. Nothing here follows
+    /// it; `summary(period:provider:)` is the read this copy follows.
+    public func export() async throws -> Data {
+        guard let credentials else { throw LeaderboardError.notJoined }
+        return try await api.export(as: credentials)
+    }
+
     /// The member's name and settings live on the server, and another device
     /// may change them: this Mac's copy follows what `/me` says, and keeps
     /// what an answer doesn't say (a server from before devices sends no name).

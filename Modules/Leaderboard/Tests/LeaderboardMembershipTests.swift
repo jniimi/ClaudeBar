@@ -328,6 +328,16 @@ struct LeaderboardMembershipTests {
         #expect(!membership.isVisible)
     }
 
+    // MARK: - Exporting
+
+    /// The export is signed as the member, so a Mac that hasn't joined has
+    /// nothing to sign it with, and doesn't ask the server.
+    @Test func `should refuse to export before joining, without asking the server`() async {
+        await #expect(throws: LeaderboardError.notJoined) { _ = try await membership().export() }
+
+        verify(api).export(as: .any).called(0)
+    }
+
     // MARK: - Leaving
 
     @Test func `should forget this Mac's key and the membership once the server deletes the person`() async throws {

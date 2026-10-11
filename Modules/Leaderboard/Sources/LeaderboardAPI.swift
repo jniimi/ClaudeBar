@@ -247,6 +247,10 @@ public protocol LeaderboardAPI: Sendable {
     func upload(_ days: [DailyTokens], as credentials: MemberCredentials) async throws -> [RefusedDay]
     /// You on one board, with your name, settings and devices. `provider` `nil` = everyone.
     func me(period: BoardPeriod, provider: String?, as credentials: MemberCredentials) async throws -> MemberSummary
+    /// Everything the server holds about the member, `/me/export`: what `/me`
+    /// says, with every row each device ever uploaded, as the server wrote it.
+    /// An added device in its first week is refused (`deviceTooNew`).
+    func export(as credentials: MemberCredentials) async throws -> Data
     func update(_ change: MemberChange, as credentials: MemberCredentials) async throws
     func leave(as credentials: MemberCredentials) async throws
     /// One board's members, in rank order. `provider` `nil` = everyone.

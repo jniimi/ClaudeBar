@@ -83,6 +83,7 @@ actor CrossingLeaderboardAPI: LeaderboardAPI {
         await withCheckedContinuation { pending = $0 }
     }
 
+    func export(as credentials: MemberCredentials) async throws -> Data { Data() }
     func join(username: String, publicKey: String, label: String) async throws {}
     func upload(_ days: [DailyTokens], as credentials: MemberCredentials) async throws -> [RefusedDay] { [] }
     func update(_ change: MemberChange, as credentials: MemberCredentials) async throws {}

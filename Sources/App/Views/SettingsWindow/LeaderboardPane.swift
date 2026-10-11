@@ -194,11 +194,9 @@ struct LeaderboardPane: View {
         }
     }
 
+    /// Saves what the server holds, `/me/export`, byte for byte as it came.
     private func export() async throws {
-        let summary = try await membership.summary(period: .thirtyDays)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(summary)
+        let data = try await membership.export()
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "claudebar-leaderboard-\(membership.username?.value ?? "me").json"

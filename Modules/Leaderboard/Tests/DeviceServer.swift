@@ -65,6 +65,7 @@ final class DeviceServer: LeaderboardAPI, @unchecked Sendable {
         summary
     }
 
+    func export(as credentials: MemberCredentials) async throws -> Data { Data() }
     func upload(_ days: [DailyTokens], as credentials: MemberCredentials) async throws -> [RefusedDay] { [] }
     func update(_ change: MemberChange, as credentials: MemberCredentials) async throws {}
     func leave(as credentials: MemberCredentials) async throws {}

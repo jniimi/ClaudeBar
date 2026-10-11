@@ -54,6 +54,17 @@ struct LeaderboardHTTPClient: LeaderboardAPI {
         return try decode(MemberSummary.self, data)
     }
 
+    /// `/me/export`'s bytes, unchanged: the app models only part of what the
+    /// server holds (not the device each row came from), so decoding and
+    /// encoding again would lose the rest. Checked only to be JSON.
+    func export(as credentials: MemberCredentials) async throws -> Data {
+        let data = try await send("GET", "/me/export", signedBy: Signer(credentials))
+        guard (try? JSONSerialization.jsonObject(with: data)) != nil else {
+            throw LeaderboardError.rejected("The leaderboard answered with something unreadable.")
+        }
+        return data
+    }
+
     func update(_ change: MemberChange, as credentials: MemberCredentials) async throws {
         _ = try await send("PATCH", "/me", body: try JSONEncoder().encode(change), signedBy: Signer(credentials))
     }
