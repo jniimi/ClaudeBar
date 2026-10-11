@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Cloudflare AI**: a new provider, off by default. With a read-only API token it shows today's Workers AI neurons against the free 10k, the month's Workers AI and AI Gateway tokens, the Workers Paid overage estimate and your last invoice. → [docs](https://github.com/tddworks/ClaudeBar/blob/main/docs/providers/cloudflare-ai/README.md)
+- **Cloudflare AI**: a new provider, off by default. With a read-only API token it shows today's Workers AI neurons against the free 10k, the month's Workers AI and AI Gateway tokens, the Workers Paid overage estimate and your last invoice. ([#545](https://github.com/tddworks/ClaudeBar/pull/545)) → [docs](https://github.com/tddworks/ClaudeBar/blob/main/docs/providers/cloudflare-ai/README.md)
 
 ---
 
