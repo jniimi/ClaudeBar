@@ -127,11 +127,11 @@ Monitor  ◆                                  THE ROOT — what the menu bar is 
 │       │                                   by their own context, handed to each login filled with its
 │       │                                   values: `usageHistory` (a UsageLog.Definition) · `accounts.signIn`
 │       ├── accounts: Accounts  ◆           NEVER EMPTY. One account is the "default" — the plain login.
-│       │   │                               THIS MAC IS ITS: an added login reads only what uses its own
-│       │   │                               values (its folder, its key) — never an environment variable,
-│       │   │                               a fixed path, a fixed Keychain name, browser cookies or a local
-│       │   │                               database. Its logins are INTERCHANGEABLE, and it is the one
-│       │   │                               owner of the rule that says so:
+│       │   │                               It is SIGNED IN ON THIS MAC; an added one through its folder or
+│       │   │                               key, and shows only what that sign-in reaches — never this Mac's
+│       │   │                               environment, fixed paths, Keychain names, browser or databases.
+│       │   │                               Its logins are INTERCHANGEABLE, and it is the one owner of the
+│       │   │                               rule that says so:
 │       │   ├── unpaused → [Account]        DERIVED — the logins not paused
 │       │   ├── paused → [Account]          DERIVED — the PAUSED group
 │       │   ├── status                      DERIVED — unpaused-with-usage .map(status).min(): the product
@@ -420,7 +420,7 @@ definition.missingSettings           → [Setting]    Import: "Key needed"
 | a login knows only itself: it names its product by id and never refers to it; anything product-level about a login is asked of its provider, found through `Providers.provider(of:)` — a stale login never crashes, nothing leaks | `Account` · `Providers` |
 | accounts are SIMULTANEOUS — every enabled login is fetched and shown side by side under its provider; the popover shows the selected provider's. (A vendor that allows one live login at a time would add an `active` account; none does today) | `Monitor.selection` |
 | one definition serves every account: the account's values fill `{{account.x}}` when the fetch runs; a data source is never copied per login | `DataSource` |
-| **this Mac is the default login's**: a definition is written once, for any login; the default login fills each account value from its default, and a read that uses no account value — an environment variable, a fixed path, a fixed Keychain name, browser cookies, a local database or log — is this Mac's, made by the default login alone. An added login can never show this Mac's numbers, whatever its definition forgets ([multi-account design](../features/multi-account/design.md#what-a-login-reads--this-mac-is-the-default-logins)) | `Accounts` (who may) · each DataSources node's `withoutThisMac()` (what touches this Mac) |
+| **an account shows only what its own sign-in reaches** ([USER_JOURNEYS F13](USER_JOURNEYS.md)): a definition is written once, for any account. The default account is signed in on this Mac — its folder is `folder.default`, and every read is reached. An added account is signed in through its folder or key: a read that names nothing of it — an environment variable, a fixed path or Keychain name, browser cookies, a local database or log — is not reached, whatever its definition forgets ([multi-account design](../features/multi-account/design.md#what-an-accounts-sign-in-reaches)) | `ProviderDefinition.dataSources(for:)` — the definition read for one account |
 | status is QUOTA health, derived from usage; a failed fetch is FETCH health, in `sync` — a key that expired never turns the menu bar red | `Account.status` · `Account.sync` |
 | **a product's logins are INTERCHANGEABLE** — a pool: the product reads its healthiest unpaused login (min), so one empty login never holds its product at DEPLETED while another has room; it reads DEPLETED only when every one is empty. Products are not: one product's room never covers another's, so the menu bar reads the worst product (max). Every login keeps its own truth — its row, pill and alert say its own status and when it resets. A login with no usage yet never stands for its product | `Accounts.status` · `Monitor.overallStatus` |
 | *in use* is the TERMINAL's choice, not the monitor's: every enabled login is still fetched and shown; only new `claude` / `codex` sessions start on the login in use. It is not the `active` account the law above rules out | `InUse` |

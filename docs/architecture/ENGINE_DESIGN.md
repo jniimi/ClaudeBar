@@ -30,7 +30,7 @@ needs; each became a generic piece, never a vendor type:
 | 15-minute cache, a remembered 429 | `cache.ttl` (also the background floor) and rate-limit memory on `DataSource` |
 | the account's email and billing type | `context` files handed to the mapping |
 | the folder-trust prompt | `recover.patchJSONFile`, tried once |
-| an added login that must never read this Mac's key, logs or database (#577) | `withoutThisMac()` on each lookup, fetch, data source and usage log: a read that uses no account value is the default login's alone — no `accounts.patch` |
+| an added account that must never read this Mac's key, logs or database (#577) | `forAccount(values)` on a data source or usage log: the definition read for that account, where a read that names nothing of it — no `{{account.x}}`, no pasted `setting` — is left out; no `accounts.patch` |
 | Codex logins in their own folders (#326) | `accounts` (`folder`, `cli`), `{{account.x}}`, `folder.accountId` given as every added login's `identity` (fail closed when a folder signs in to someone else, or holds no one), `verifyBeforeBackground` (the default login's), JSON-RPC `then` + `environment` + `errors`, `fallback.sameLogin` (#525), `#jwt.claim` and `$credential.` paths |
 | the usage API's model limits, plan and money | JSON mapping rules, not a script: `each` + `where`, names by `firstWord`/`lowercase`, `unique` (first wins), `overLimit` (negative left), `countdown: "hours"`, `plan.plans` from `$credential.`, and a list of `cost` shapes with `when` and exact `{amount, decimals}` minor units |
 | today's usage and guest passes | `UsageHistory` beside the providers (read with the popover open, never in the background; keyed by the login whose logs it reads) and the `GuestPasses` capability |
@@ -652,7 +652,7 @@ credits* quota, `current` of `maximum`, resetting at `nextRefill.next`.
 An added OpenAI account needs no `accounts` block: its `apiKey` is an
 account-scope setting, so the `setting` lookup is its own, and
 `OPENAI_ADMIN_KEY` is this Mac's, read by the default login alone
-([what a login reads](../features/multi-account/design.md#what-a-login-reads--this-mac-is-the-default-logins)).
+([what an account's sign-in reaches](../features/multi-account/design.md#what-an-accounts-sign-in-reaches)).
 
 `openai-costs.js` adds `data[].results[].amount.value` into one `cost`, a
 line per `line_item`, for "Last 30 days".

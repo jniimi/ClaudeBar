@@ -7,7 +7,7 @@ description: Contributor design for multiple accounts under one provider — how
 User guide: [README.md](README.md).
 
 **Being rebuilt ([#577](https://github.com/tddworks/ClaudeBar/issues/577)):
-`accounts.patch` gives way to one law, [§ What a login reads](#what-a-login-reads--this-mac-is-the-default-logins).**
+`accounts.patch` gives way to one law, [§ What an account's sign-in reaches](#what-an-accounts-sign-in-reaches).**
 Until it lands, an added login still runs the definition with `accounts.patch`
 merged in; the sections below describe the design it is moving to.
 
@@ -95,69 +95,84 @@ own corner of the vault.**
        own cache                    own cache                    own cache
 ```
 
-## What a login reads — this Mac is the default login's
+## What an account's sign-in reaches
 
-Every value a definition reads lives somewhere, and that place has one owner.
-**This Mac** is what every program on it sees: environment variables, files at
-fixed paths, Keychain items with fixed names, browser cookies, an app's local
-database, the logs a tool writes for whoever runs it. Whoever the tools on this
-Mac are signed in as is the **default login**, so this Mac is its. An added
-login is defined by what it brings: its folder, its pasted key, its region.
+Mia's journey ([USER_JOURNEYS 2b, F13](../../architecture/USER_JOURNEYS.md)):
+her terminal is signed in to *Personal*; she adds *Work — Acme* by
+*Sign in with browser*, *Choose Signed-in Folder* or the form's *API KEY*. She
+thinks of each account by **how it is signed in**, and expects each to show its
+own numbers. Two accounts showing the same numbers is what makes her stop
+trusting both (#578).
 
-> **A definition is written once, for any login, with `{{account.x}}`. The
-> default login fills each value from its default. A read that uses no account
-> value belongs to this Mac: only the default login makes it.**
+> **An account shows only what its own sign-in reaches.** The default account
+> is the one **signed in on this Mac**: what every program here sees — the
+> terminal's CLI, environment variables, its folders, the Keychain, the
+> browser, an app's own database. An added account is signed in through the
+> folder or the key Mia gave it, and never reaches anything of this Mac.
 
 ```text
-                    {{account.folder}}/auth.json        OPENAI_API_KEY · ~/.vibe · opencode.db
-                    { "setting": "apiKey" } (account)  browser cookies · "Claude Code-credentials"
-                    ─────────────────────────────────  ─────────────────────────────────────────
-default login       ✓ filled from its defaults         ✓
-added login         ✓ filled from its own values       ✗ this Mac's: left out
+ provider.refresh(account)
+        │
+        ▼
+ definition.dataSources(for: account)
+        │
+   ┌────┴───────────────────────────┐
+   ▼                                ▼
+ DEFAULT ACCOUNT                  ADDED ACCOUNT
+ signed in on this Mac            signed in through its folder / key
+ {{account.folder}} ← folder.default    {{account.folder}} ← its folder
+ every read is reached            a read that names nothing of the account is
+                                  this Mac's: not reached. A CLI run goes
+                                  through accounts.cli; a folder account's
+                                  accountId is checked on every fetch
+   │                                │
+   ▼                                ▼
+ "Personal": its quotas           "Work — Acme": its quotas, never Personal's
 ```
 
-**The default login's folder is `folder.default`** (`${CODEX_HOME:-~/.codex}`),
-or the account setting's own `default` (`~/.kimi`), so a read written under
-`{{account.folder}}` serves it too. A value the person saved on the default
-login wins over its default, as it always has.
+```text
+ read in the definition                       Personal (this Mac)   Work (folder)   Side (API key)
+ ─────────────────────────────────────────    ───────────────────   ─────────────   ──────────────
+ { "environment": "OPENAI_API_KEY" }                 ✓                   ✗               ✗
+ { "setting": "apiKey" }                             ✓ if saved          ✓ if saved      ✓
+ "{{account.folder}}/auth.json"                      ✓ ~/.codex          ✓ ~/work-codex  ✗ no folder
+ "~/.vibe/logs/session"                              ✓                   ✗               ✗
+ `codex app-server` (a CLI run)                      ✓ as it is          ✓ accounts.cli  ✗
+```
 
-**Where a vendor lays out the default login differently, the definition says
-both places where they are used** — never in a table of names to look up:
+**The default account's folder is `folder.default`** (`${CODEX_HOME:-~/.codex}`),
+or the folder setting's own `default` (`~/.kimi`), so a read written under
+`{{account.folder}}` serves it too. A value the person saved on the default
+account wins over its default, as it always has.
+
+**Where a vendor keeps the default account somewhere else, the definition says
+both places where they are read** — never in a table of names to look up:
 
 ```jsonc
 { "keychain": { "service": "Claude Code-credentials" } },                             // this Mac's
-{ "keychain": { "service": "Claude Code-credentials-{{account.folder#sha256.8}}" } }  // the login's folder
-"context": { "account": { "path": ["{{account.folder}}/.claude.json",               // the login's
+{ "keychain": { "service": "Claude Code-credentials-{{account.folder#sha256.8}}" } }  // the account's folder
+"context": { "account": { "path": ["{{account.folder}}/.claude.json",               // the account's
                                    "${CLAUDE_CONFIG_DIR:-~}/.claude.json"] } }       // this Mac's
 ```
 
 `#sha256.8` is a placeholder transform like `#host` and `#jwt.sub`: the first
 eight hex digits of the value's SHA-256, which is how Claude Code names a
-folder's Keychain item. A path list keeps, for an added login, only its own
+folder's Keychain item. A path list keeps, for an added account, only its own
 entries.
 
-**Each node decides about itself** — tell, don't ask, a Composite over
-`firstOf`:
-
-| Node (DataSources) | `withoutThisMac()` |
+| Owner | Decides |
 |---|---|
-| `CredentialLookup` | a lookup that uses an account value — `{{account.x}}`, or an account-scope `setting` — is kept; any other is this Mac's and is dropped. `firstOf` keeps its kept children, and is `nil` when none is left |
-| `Fetch` | `http` is kept: it reaches what its credential reaches. A CLI, command, file, directory or `sqlite` fetch is kept when it uses an account value (a path under `{{account.folder}}`, `{{token}}` from a kept credential) or when the definition says how its CLI runs as an added login (`accounts.cli`); otherwise it reads this Mac and is dropped |
-| `DataSourceDefinition` | `nil` when its credential or its fetch is |
-| `UsageLog.Definition` | kept when its records' place uses an account value; a fixed glob, a fixed command or database, and `otherApps`, are this Mac's |
-
-DataSources never learns what a login is; it only answers *"which of my reads
-touch this Mac?"*. Providers owns *who may*: an added login runs
-`definition.withoutThisMac()`, filled with its values. A hand-off or fallback to
-a data source the login doesn't have moves on along the chain, as it always
-has (`Provider`). An account value the definition's reads name is found the
-way `{{account.x}}` is already found — no path is guessed from its text.
+| `Accounts` | which account is signed in on this Mac (the default) and what an added one was signed in with — `isDefault`, `folder: SignedInFolder?`, its values and vault corner. Nothing new is stored |
+| `ProviderDefinition.dataSources(for:)` · `usageHistory(for:)` | what one account's sign-in reaches: the definition read for it. The one door Providers uses |
+| DataSources, inside that door | each piece of a definition says whether it names the account — a lookup, a fetch, a context file, a log. A read that names nothing of the account (`{{account.x}}`, a pasted `setting`) is this Mac's. DataSources never learns what an account is; nothing is guessed from what a path looks like |
+| `accounts.cli` | how the vendor's CLI is signed in through a folder: a subprocess reads only where it is pointed |
+| `Provider` | a hand-off or fallback to a data source the account's sign-in doesn't reach moves on along the chain, as it always has |
 
 **What this takes out of a definition:** `accounts.patch`, and with it every
 `"firstOf": null`, `"<kind>": null`, `"fallbackOn": null`, per-source
 `identity`, `requiresFiles`, and the CLI switch copied into each data source.
 A definition that forgets nothing can no longer show this Mac's numbers under
-an added login; that is the default.
+an added account; that is the default.
 
 ### What a definition still says, and why
 
@@ -234,7 +249,7 @@ diff:
 | **default account** | the plain login the CLI already uses; id = provider id; never removed | "the first added one" |
 | **added account** | a login beside it; id `<provider>.<acct>` | a copy of the provider |
 | **account values** | the account-scope settings that fill `{{account.x}}` — a folder, a login id, a region. The default login's folder is `folder.default` | secrets |
-| **this Mac** | what every program on the Mac sees: environment variables, fixed paths, fixed Keychain names, browser cookies, local databases and logs. The default login's, never an added one's | the default login's folder, which is one of its values |
+| **signed in on this Mac** | the default account's sign-in: what every program on the Mac sees — the terminal's CLI, environment variables, fixed paths and Keychain names, browser cookies, local databases and logs. Never an added account's | the default login's folder, which is one of its values |
 | **folder** (the account value) | the folder a login lives in, `{{account.folder}}` — a signed-in folder for an added login, `folder.default` for the default one. The vendor's own word for it (`CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `GEMINI_CLI_HOME`) appears only in `accounts.cli.environment.set` | `$HOME` |
 | **account secret** | an account-scope secret (an API key) — a *name*, its value in the vault under that account | a value in `settings.json` |
 | **way to add** (`accounts.ways`) | how the definition lets a person add one — the keys it has: `signIn` · `folder` · `form` | a data source kind |
@@ -387,8 +402,8 @@ ProviderFactory.make(definition, settings, vault)
   ├─ default account:  definition filled with its values, else their defaults ──▶ DataSources.make(_, secrets: vault.scoped(to: "<id>"))
   │
   └─ for each config:  provider.add(config)
-        │  definition.withoutThisMac() filled with config.values   {{account.x}} filled
-        │  ── a data source left with no read of its own is left out for that login
+        │  definition.forAccount(config.values) — what its sign-in reaches, {{account.x}} filled
+        │  ── a data source left with no read of the account's is left out
         │  ── accounts.cli applied to every CLI run; identity from accounts.folder.accountId
         ▼
         DataSources.make(_, secrets: vault.scoped(to: "<id>.<acct>"))
@@ -597,7 +612,7 @@ are the cases the definition declares (§8).
 |---|---|
 | a provider has at least one account; the default's id is the provider id, an added one's `<provider>.<acct>` | `Provider.accounts` |
 | one definition serves every account — an added login's data sources are the definition without this Mac's reads, filled with its values; never a hand-built copy | `ProviderDefinition.dataSources(forAccount:)` |
-| **this Mac is the default login's**: an added login never makes a read that uses no account value — an environment variable, a fixed path, a fixed Keychain name, browser cookies, a local database or log | `Accounts` (who may) · each DataSources node's `withoutThisMac()` (what touches this Mac) |
+| **an account shows only what its own sign-in reaches**: the default account is signed in on this Mac; an added one, through its folder or key, never reaches a read that names nothing of it — an environment variable, a fixed path, a fixed Keychain name, browser cookies, a local database or log | `ProviderDefinition.dataSources(for:)` — the definition read for one account |
 | the default login's folder is `folder.default` (or the folder setting's `default`), so a read under `{{account.folder}}` serves it too; a value it saved wins | `ProviderDefinition` |
 | a provider without `accounts` cannot add one — the button is absent, not disabled | `ProviderDefinition.accounts` |
 | an account's secret is read only from that account's vault corner; a missing one is *Key needed*, never the default's key or the environment | `SecretStore.scoped(to:)`, used by every added login's data sources |

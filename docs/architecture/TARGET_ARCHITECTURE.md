@@ -414,10 +414,11 @@ reproduce its output, quota for quota, before the Swift goes.
   one definition serves every account, the account's values filled when the
   fetch runs. Accounts are simultaneous. **Built** for Codex (#356) and
   Claude (`claude.json`'s `accounts`): `{{account.x}}` and one `Provider`
-  owning its `Account`s. What an added login reads is one law, not a patch
-  per definition: **this Mac is the default login's** — a read that uses no
-  account value is left out for an added login, each DataSources node saying
-  so about itself (`withoutThisMac()`), and its CLI runs under `accounts.cli`
+  owning its `Account`s. What an added account reads is one law, not a patch
+  per definition: **an account shows only what its own sign-in reaches** —
+  the default account is signed in on this Mac; an added one runs the
+  definition read for it (`definition.forAccount(values)`), where a read that
+  names nothing of the account is left out, and its CLI runs under `accounts.cli`
   ([#577](https://github.com/tddworks/ClaudeBar/issues/577), replacing
   `accounts.patch`). The rest is designed in
   [features/multi-account/design.md](../features/multi-account/design.md).

@@ -41,6 +41,7 @@ the command that lands on the domain, and the node that answers.
 | 1 | Mia glances at the menu bar | *38%*, amber | nothing | `monitor.lowestQuota` | `Monitor` → worst `Quota.status` |
 | 2 | Mia opens the popover | *Session · Weekly · Spark*, *% left*, *Resets in 1h 12m*, *Running hot*, *EXTRA USAGE*, *Updated 2m ago · via RPC*, *PLUS* | switches to a lighter model for an hour | `account.usage` | `Usage` → `[Quota]` · `Cost` · `Plan` |
 | 2a | Mia has two Codex logins | one **Codex** tab in the popover: **ACCOUNTS** *Personal* and *Work — Acme* side by side, each with its own quotas, and a **PAUSED** row for a login she stopped watching; Settings lists one **Codex** with *Add Account…* and a toggle per login | pauses *work* on the weekend from the popover — right-click the login, **Pause**; later clicks *work* when *me* runs low, or **Resume** on Monday | `monitor.pause(_:)` · `resume(_:)` · `monitor.select(account)` · `provider.bestAccount` | `Provider` (the product) → `[Account]` (the logins) |
+| 2b | Mia adds her work Codex | **Add Account…** — *Sign in with browser*, *Choose Signed-in Folder*, or the form's *API KEY*; then *Work — Acme* beside *Personal*, each with its own quotas | signs in to work in the browser | `provider.signIn()` · `provider.addAccount(signedInAt:)` · `addAccount(filling:)` | `Account` — shown only through its own sign-in: the default one is signed in on this Mac, an added one through its folder or key |
 | 3 | Raj sees Codex fail | *Couldn't read your key* · *Session expired. Run `codex` in terminal to log in again.* · last usage dimmed, *Last seen 3h ago* | logs in, or opens settings | `account.sync.lastError` | `DataSourceError(step: .lookup)`; `usage` kept |
 | 3a | Raj has only the Codex app, no `codex` command | *NOT SET UP* — *CLI not found* — though the app on his Mac carries one | expects nothing to do | `provider.refresh(account)` | the definition says where its CLI may be; no setting needed (#458) |
 | 4 | Raj opens Codex settings | *DATA SOURCE: RPC · API*, *KEY LOOKUP ORDER*, *Test Connection*, *Built in* | switches to RPC, tests | `provider.use("rpc")` · `dataSource.fetchUsage()` | `Provider.dataSources` · `CredentialLookup` |
@@ -67,7 +68,7 @@ the command that lands on the domain, and the node that answers.
 
 ## 3 · What the journeys found
 
-Twelve findings; each is a word or a law the model must keep.
+Thirteen findings; each is a word or a law the model must keep.
 
 | # | Finding | From moment |
 |---|---|---|
@@ -83,6 +84,7 @@ Twelve findings; each is a word or a law the model must keep.
 | F10 | Import **says where the key will go** before asking for it; a *CLI* provider from someone else shows its command and asks before saving | 11 |
 | F11 | Two logins of one product are **two things Mia watches** but **one thing Raj fixes**: each login is a pill and a menu-bar entry; the data source, its settings and the look are set once for Codex | 2a, 4 |
 | F12 | **Pause is not remove**: a login can be switched off without losing its folder, and a paused login stays on the popover's page, dimmed and resumable — a login never disappears without saying which of the two happened; an expired key is not a red quota — it reads *Couldn't read your key*, not CRITICAL | 2a, 3 |
+| F13 | **An account shows only what its own sign-in reaches.** The default account is the one signed in on this Mac — the terminal's CLI, its environment, its folders, the Keychain, the browser. An added account is signed in through the folder or the key Mia gave it, and never shows anything of this Mac: two accounts showing the same numbers is the one thing that makes her stop trusting both | 2b |
 
 ## 4 · The words the new screens print
 
@@ -134,6 +136,13 @@ Scenario: Pausing a login from the dashboard
    And it is listed under PAUSED with "last seen" and a "Resume" button
   When she presses "Resume"
   Then Work counts again, with the numbers it last showed
+
+Scenario: An added account shows only its own sign-in
+  Given Mia's terminal is signed in to Codex as Personal
+   And she adds Work by choosing its signed-in folder
+  When the popover refreshes
+  Then Work shows Work's usage
+   And nothing on this Mac — its environment, ~/.codex, another tool's logs — appears under Work
 ```
 
 ## 6 · Open
