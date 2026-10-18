@@ -1,3 +1,4 @@
+import Crypto
 import Foundation
 
 /// A definition adapted to one login, as data: an RFC 7396 merge patch for
@@ -28,7 +29,7 @@ extension DefinitionTemplate {
         guard let json = try? json() else { return [] }
         var names = Set<String>()
         _ = json.mapStrings { text in
-            names.formUnion(Placeholders.names(in: text, scope: scope))
+            names.formUnion(Placeholders.names(in: text, scope: scope).map { Placeholders.split($0).base })
             return text
         }
         return names.sorted()
@@ -48,11 +49,29 @@ enum Placeholders {
     static func fill(_ text: String, _ values: [String: String], scope: String) -> String {
         var text = text
         for name in names(in: text, scope: scope) {
-            if let value = values[name] {
-                text = text.replacingOccurrences(of: "{{\(scope).\(name)}}", with: value)
+            let (base, transform) = split(name)
+            if let value = values[base], let filled = transformed(value, by: transform) {
+                text = text.replacingOccurrences(of: "{{\(scope).\(name)}}", with: filled)
             }
         }
         return text
+    }
+
+    /// `folder#sha256.8` → the value's name and what is done to it.
+    static func split(_ name: String) -> (base: String, transform: String?) {
+        guard let mark = name.firstIndex(of: "#") else { return (name, nil) }
+        return (String(name[..<mark]), String(name[name.index(after: mark)...]))
+    }
+
+    /// `sha256.N`: the first N hex digits of the value's SHA-256 — how Claude
+    /// Code names a config folder's Keychain item. An unknown transform fills
+    /// nothing, so the placeholder is reported as unfilled.
+    private static func transformed(_ value: String, by transform: String?) -> String? {
+        guard let transform else { return value }
+        let parts = transform.split(separator: ".")
+        guard parts.count == 2, parts[0] == "sha256", let digits = Int(parts[1]) else { return nil }
+        let hash = SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
+        return String(hash.prefix(max(0, digits)))
     }
 
     static func names(in text: String, scope: String) -> [String] {
