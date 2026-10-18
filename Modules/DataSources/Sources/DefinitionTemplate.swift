@@ -48,6 +48,32 @@ extension DataSourceDefinition {
     }
 }
 
+extension DataSourceDefinition {
+    /// The data source without the lookups in its chain that name a value
+    /// it wasn't given — a Keychain item named after a folder, for an
+    /// account no folder was set for. A lookup on its own is kept, so a
+    /// missing value is still reported.
+    public func leavingOutLookupsMissingValues(scope: String) -> DataSourceDefinition {
+        changing { $0.credential = $0.credential?.leavingOutLookupsMissingValues(scope: scope) }
+    }
+}
+
+extension CredentialLookup {
+    func leavingOutLookupsMissingValues(scope: String) -> CredentialLookup {
+        switch self {
+        case .firstOf(let lookups):
+            let named = lookups.filter { lookup in
+                guard case .firstOf = lookup else { return Placeholders.unfilled(in: lookup, scope: scope).isEmpty }
+                return true
+            }.map { $0.leavingOutLookupsMissingValues(scope: scope) }
+            return named.isEmpty ? self : .firstOf(named)
+        case .refined(let base, let refinement): return .refined(base.leavingOutLookupsMissingValues(scope: scope), refinement)
+        case .refreshing(let base, let refresh): return .refreshing(base.leavingOutLookupsMissingValues(scope: scope), refresh)
+        default: return self
+        }
+    }
+}
+
 extension UsageLog.Definition {
     /// The usage history an added account's sign-in reaches: its own logs,
     /// filled with its values — never this Mac's, nor its other apps.
@@ -58,6 +84,14 @@ extension UsageLog.Definition {
 
 /// `{{<scope>.<name>}}` in a definition's strings.
 enum Placeholders {
+    /// The names in `value`'s strings still waiting for a value.
+    static func unfilled(in value: some Encodable, scope: String) -> [String] {
+        guard let json = try? JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(value)) else { return [] }
+        var names: [String] = []
+        _ = json.mapStrings { names += Self.names(in: $0, scope: scope); return $0 }
+        return names
+    }
+
     static func fill(_ text: String, _ values: [String: String], scope: String) -> String {
         var text = text
         for name in names(in: text, scope: scope) {
@@ -76,10 +110,12 @@ enum Placeholders {
     }
 
     /// `sha256.N`: the first N hex digits of the value's SHA-256 — how Claude
-    /// Code names a config folder's Keychain item. An unknown transform fills
+    /// Code names a config folder's Keychain item. A value that is not a
+    /// place yet (`~/…`, `${VAR:-…}`), or an unknown transform, fills
     /// nothing, so the placeholder is reported as unfilled.
     private static func transformed(_ value: String, by transform: String?) -> String? {
         guard let transform else { return value }
+        guard !value.hasPrefix("~"), !value.contains("${") else { return nil }
         let parts = transform.split(separator: ".")
         guard parts.count == 2, parts[0] == "sha256", let digits = Int(parts[1]) else { return nil }
         let hash = SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()

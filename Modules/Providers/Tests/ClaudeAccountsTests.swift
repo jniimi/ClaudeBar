@@ -112,6 +112,31 @@ struct ClaudeAccountsTests {
         #expect(cli.context["signedInAs"]?.path == ["${CLAUDE_CONFIG_DIR:-~/.claude}/.claude.json", "${CLAUDE_CONFIG_DIR:-~}/.claude.json"])
     }
 
+    @Test
+    func `should look up only the default login's own Keychain item, not one named for a folder`() throws {
+        let definition = try ProviderFactory.builtIn("claude")
+        let api = try #require(try definition.asDefaultAccount("api"))
+
+        #expect(api.credential?.lookupOrder == [
+            "${CLAUDE_CONFIG_DIR:-~/.claude}/.credentials.json",
+            "Keychain “Claude Code-credentials”",
+            "$CLAUDE_CODE_OAUTH_TOKEN",
+        ])
+    }
+
+    @Test
+    func `should look up the Keychain item Claude Code names after an added login's folder`() throws {
+        let sources = try ProviderFactory.builtIn("claude").dataSources(forAccount: [
+            "folder": "/Users/me/work-claude", "accountId": "work@example.com",
+        ])
+        let api = try #require(sources.first { $0.kind == "api" })
+
+        #expect(api.credential?.lookupOrder == [
+            "/Users/me/work-claude/.credentials.json",
+            "Keychain “Claude Code-credentials-91eb4f94”",
+        ])
+    }
+
     // MARK: - Guest passes are the default login's
 
     @Test

@@ -156,7 +156,10 @@ both places where they are read** — never in a table of names to look up:
 `#sha256.8` is a placeholder transform like `#host` and `#jwt.sub`: the first
 eight hex digits of the value's SHA-256, which is how Claude Code names a
 folder's Keychain item. A path list keeps, for an added account, only its own
-entries.
+entries. A lookup in a chain that names a value the account can't give is left
+out of it: the default account's folder is `${CLAUDE_CONFIG_DIR:-~/.claude}`,
+not yet a place, so it has no folder-named Keychain item — as Claude Code has
+none when no folder is set.
 
 | Owner | Decides |
 |---|---|

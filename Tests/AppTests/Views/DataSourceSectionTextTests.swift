@@ -1,6 +1,7 @@
 import DataSources
 import Domain
 import Foundation
+import Infrastructure
 import Providers
 import Testing
 @testable import ClaudeBar
@@ -31,10 +32,15 @@ struct DataSourceSectionTextTests {
     }
 
     @Test
+    @MainActor
     func `should show where the key is looked for as a path through places`() throws {
-        let text = DataSourceSectionText(definition: try claude())
+        let settings = JSONSettingsRepository(store: JSONSettingsStore(
+            fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).json")))
+        let claude = ProviderFactory.make(try claude(), settings: settings)
+        let text = DataSourceSectionText(definition: claude.configuration.definitionAsRun)
 
-        #expect(text.lookupOrder(for: "api") == "~/.claude/.credentials.json → Keychain “Claude Code-credentials” → $CLAUDE_CODE_OAUTH_TOKEN")
+        #expect(text.lookupOrder(for: "api")
+            == "${CLAUDE_CONFIG_DIR:-~/.claude}/.credentials.json → Keychain “Claude Code-credentials” → $CLAUDE_CODE_OAUTH_TOKEN")
         #expect(text.lookupOrder(for: "cli") == nil)
     }
 

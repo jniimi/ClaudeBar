@@ -384,7 +384,9 @@ public struct ProviderDefinition: Sendable, Equatable, Codable {
     /// The data sources the default account runs — signed in on this Mac, so
     /// every read is reached — filled with `values`.
     public func dataSources(forDefaultAccount values: [String: String]) throws -> [DataSourceDefinition] {
-        try dataSources.map { try knowingWhoIsSignedIn($0).filled(values, scope: "account") }
+        try dataSources.map {
+            try knowingWhoIsSignedIn($0).filled(values, scope: "account").leavingOutLookupsMissingValues(scope: "account")
+        }
     }
 
     /// The data sources an added account runs: what its own sign-in reaches
