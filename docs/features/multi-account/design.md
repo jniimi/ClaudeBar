@@ -176,15 +176,26 @@ an added account; that is the default.
 
 ### What a definition still says, and why
 
+The JSON is an abstraction layer: it answers three questions, each once —
+*who is the provider* (`profile`), *how is an account signed in*
+(`settings` and `accounts`), *how do I get its usage* (`dataSources`). A key
+provider writes no `accounts`: its key is an account-scope setting and each read
+says whose it is. Only a vendor whose login lives in a folder writes
+`accounts`, once.
+
 ```jsonc
 "accounts": {
   "folder": {                                       // "Choose Signed-in Folder"
-    "default": "${CODEX_HOME:-~/.codex}",           // the default login's home
-    "accountId": { "field": "$context.login.account" },  // who it is; checked on every fetch of an added login
+    "default": "${CODEX_HOME:-~/.codex}",           // where the default account's login is kept
+    "signedInAs": {                                 // "Signed in as …" — read once, for every source
+      "file":  "{{account.folder}}/auth.json",
+      "id":    "$.tokens.account_id",               //   the same person on every fetch
+      "email": "$.tokens.id_token#jwt.email"        //   what the pill says
+    },
     "notSignedIn": "…"                              // optional: the fix is vendor-specific
   },
   "signIn": { "args": ["login"] },                  // "Sign in with browser": the vendor's login command
-  "cli": {                                          // how the CLI runs as an added login:
+  "cli": {                                          // how the CLI runs as an added account:
     "environment": {                                //   the shape a CLI fetch already uses
       "set":   { "CODEX_HOME": "{{account.folder}}" },   // pointed at its folder
       "unset": ["OPENAI_API_KEY", "…"]              //   blind to this Mac's login
@@ -196,22 +207,24 @@ an added account; that is the default.
 
 | Key | Why it exists |
 |---|---|
-| `folder.default` | the default login's folder; fills `{{account.folder}}` for it, and is never added a second time |
-| `folder.accountId.field` | the fact that names the login, read through a lookup or a `context` file under `{{account.folder}}`. `Provider` gives every data source of an added folder login an `identity` from it, so a folder signed in to someone else fails closed. A missing file reads as no one: fail closed, never another login |
+| `folder.default` | where the vendor keeps the default account's login; fills `{{account.folder}}` for it, and is never added a second time |
+| `folder.signedInAs` | the file that says who is signed in (a path, or a list where the vendor keeps the default account elsewhere), and its fields: `id`, and any of `email`, `organization`, `billingType`. It is the screen's *Signed in as …*: the pill's email when a mapping names none, what a mapping reads as `$signedInAs.<field>`, what *Choose Signed-in Folder* reads to say who is there, and the identity of an added folder account, checked before and after every fetch. A missing file means not signed in: fail closed, never another account |
 | `folder.notSignedIn` | optional; what to do differs per vendor |
 | `signIn.args` | the vendor's login command; its program is the definition's `cli`, its environment `accounts.cli` |
 | `cli.environment.set` | the variables that point the vendor's CLI at the folder — `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, or Kiro's `HOME` and `XDG_*` — written as a CLI fetch's `environment` already is. Fetch, refresh and sign-in run with them, and *In use* writes the same lines into the person's shell |
-| `cli.environment.unset` · `cli.args` | this Mac's variables that would beat the folder; arguments that keep the login inside it. Said once, applied to every CLI run of an added login. The default login's CLI runs as it always has |
+| `cli.environment.unset` · `cli.args` | this Mac's variables that would beat the folder; arguments that keep the login inside it. Said once, applied to every CLI run of an added account. The default account's CLI runs as it always has |
 
-Gone: `accounts.patch`; `folder.savedAs` and `accountId.savedAs` — an added
-folder login's folder is always `folder` and its id `accountId`, and values saved
-under the old names (`codexHome`, `configDirectory`, Gemini's, Kimi's and
-Kiro's `home`; `chatgptAccountId`, `loginEmail`) are read through the
-compatibility tables
-([settings.md](../../settings.md)); `requiresFiles` — a folder whose login file is
-missing holds no one; `folder.derived` — `{{account.folder#sha256.8}}` and a path
-list, said where they are used; `signIn.cli`, `signIn.homeVariable` and `signIn.unset` —
-the definition's `cli` and `accounts.cli`, said once.
+Gone: `accounts.patch`; per-source `context`, `identity` and `requiresFiles`
+for who is signed in — `signedInAs`, said once; `folder.accountId` and
+`folder.email` — its `id` and `email`; `folder.savedAs` and `accountId.savedAs`
+— an added folder account's folder is `folder` and its id `accountId`, and
+values saved as `codexHome`, `configDirectory`, `chatgptAccountId` or
+`loginEmail` are read through the compatibility tables
+([settings.md](../../settings.md)). A folder given on the form keeps its own
+name (Gemini's, Kiro's and Kimi's `home`, Grok's `directory`); `folder.derived`
+— `{{account.folder#sha256.8}}` and a path list, said where they are read;
+`signIn.cli`, `signIn.homeVariable` and `signIn.unset` — the definition's `cli`
+and `accounts.cli`, said once.
 
 A provider whose added login uses a different thing than its default login
 says so with two data sources, not a rule. Amp's default login is the CLI's
@@ -327,7 +340,7 @@ into JSON, and not before.
 
 | Case | JSON | Carries | What it does |
 |---|---|---|---|
-| **folder** | `"folder": { default, accountId: {field}, email?, notSignedIn? }` | where the login lives, which field names it | reads the folder through the definition's own credential/context lookup (filled with that folder), refuses the default folder and duplicates, saves `{home: folder, accountId: fact}` |
+| **folder** | `"folder": { default, signedInAs: {file, id, email?, …}, notSignedIn? }` | where the login lives, which field names it | reads the folder through the definition's own credential/context lookup (filled with that folder), refuses the default folder and duplicates, saves `{home: folder, accountId: fact}` |
 | **signIn** | `"signIn": { args, timeout? }` | the vendor's login command ([where its CLI is](../../architecture/ENGINE_DESIGN.md#27--where-a-providers-cli-is)) | makes `~/.claudebar/accounts/<provider>/<uuid>/` (0700), runs the definition's `cli` with `args` under `accounts.cli` (the folder as `{{account.folder}}`), waits; on exit 0 the provider checks the folder as **folder** does, recorded `madeBy: .signIn` |
 | **form** | `"form": true` | — | renders the form's account-scope settings; non-secrets → `values`, secrets → the account's vault; then *Test Connection* with them before saving |
 
@@ -404,7 +417,7 @@ ProviderFactory.make(definition, settings, vault)
   └─ for each config:  provider.add(config)
         │  definition.forAccount(config.values) — what its sign-in reaches, {{account.x}} filled
         │  ── a data source left with no read of the account's is left out
-        │  ── accounts.cli applied to every CLI run; identity from accounts.folder.accountId
+        │  ── accounts.cli applied to every CLI run; identity from accounts.folder.signedInAs.id
         ▼
         DataSources.make(_, secrets: vault.scoped(to: "<id>.<acct>"))
         │
@@ -617,7 +630,7 @@ are the cases the definition declares (§8).
 | a provider without `accounts` cannot add one — the button is absent, not disabled | `ProviderDefinition.accounts` |
 | an account's secret is read only from that account's vault corner; a missing one is *Key needed*, never the default's key or the environment | `SecretStore.scoped(to:)`, used by every added login's data sources |
 | an added login's CLI never sees the default login's credentials: what to point at its folder, unset and add is `accounts.cli`, said once and applied to every CLI run of an added login — fetch, refresh, sign-in | the definition (data) — run by `CLIFetcher` |
-| usage shown under a login was fetched with that login's credential; a different identity fails closed. An added folder login's identity is `accounts.folder.accountId`, given to every one of its data sources | `DataSource` (lookup) · `Provider` (gives it) |
+| usage shown under a login was fetched with that login's credential; a different identity fails closed. An added folder account's identity is `accounts.folder.signedInAs.id`, given to every one of its data sources | `DataSource` (lookup) · `Provider` (gives it) |
 | *checked once* (`verifyBeforeBackground`, #216) is the default login's: an added login is checked by being added, and only the default login marks or forgets the provider's `verifiedAtLeastOnce` | `Provider` |
 | a folder already listed, or the default login, is not added twice | `Provider` (`addAccount`) |
 | sign-in never writes to an existing folder and saves nothing on failure, cancel or timeout | `AccountSignIn` |

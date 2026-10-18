@@ -93,7 +93,7 @@ Per data source, also: `errors` (`http.<status>`, `http.default`,
 `cli.missing`, `cli.nonzero`, `cli.failed` → a reason; a 429 is always a rate
 limit), `fallbackOn` (hand-off by failure tag), `fallback`, `cache.ttl` (also
 the background-refresh floor), `context` (JSON files the mapping may read),
-`recover.patchJSONFile`, `requiresFiles`, `identity` (an added folder login's comes from `accounts.folder.accountId`),
+`recover.patchJSONFile`, `requiresFiles`, `identity` (an added folder account's comes from `accounts.folder.signedInAs`),
 `verifyBeforeBackground`. Per provider: `links.dashboardByPlan` and `accounts`
 (added logins, see `codex.json`).
 
@@ -114,7 +114,7 @@ the background-refresh floor), `context` (JSON files the mapping may read),
 - `{{setting.region.host}}` fills any string of the definition; a blank setting leaves its template unfilled (a script's `values` drop it).
 - `scope: "account"` is what *Add Account* asks for; `"for": [kind]` asks only while that data source is active, and a login without such a value runs only the sources that don't need it.
 - **An account shows only what its own sign-in reaches.** Write every read once, for any account: a read that names the account (`{{account.folder}}/…`, a pasted `setting`) is each account's own; any other (an environment variable, a fixed path or Keychain name, browser cookies, a local database or log) is this Mac's — the default account's, which is signed in here — and an added account leaves it out by itself. There is no `accounts.patch`; a definition that forgets nothing can't leak. The default login's folder is `folder.default` (or the setting's `default`); where a vendor keeps the default login elsewhere, write both places where they are read (a path list, `{{account.folder#sha256.8}}`).
-- `accounts.folder` (`default`, `accountId.field`, `notSignedIn`), `accounts.signIn` (`args`) and `accounts.cli` (`environment` `{set, unset}` as a CLI fetch writes it, and `args`: how the CLI runs as an added login) — [multi-account design](../../../docs/features/multi-account/design.md#what-an-accounts-sign-in-reaches).
+- `accounts.folder` (`default`, `signedInAs` — the file that says who is signed in and its `id`, `email`, … — `notSignedIn`), `accounts.signIn` (`args`) and `accounts.cli` (`environment` `{set, unset}` as a CLI fetch writes it, and `args`: how the CLI runs as an added login) — [multi-account design](../../../docs/features/multi-account/design.md#what-an-accounts-sign-in-reaches).
 
 ### The JSON mapping
 
