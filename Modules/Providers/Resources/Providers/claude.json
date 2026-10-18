@@ -77,14 +77,6 @@
           }
         }
       },
-      "context": {
-        "account": {
-          "path": "${CLAUDE_CONFIG_DIR:-~}/.claude.json",
-          "email": "$.oauthAccount.emailAddress",
-          "organization": "$.oauthAccount.displayName",
-          "billingType": "$.oauthAccount.billingType"
-        }
-      },
       "mapping": {
         "script": {
           "file": "claude-usage-screen.js"
@@ -93,7 +85,7 @@
       "recover": {
         "folderTrustRequired": {
           "patchJSONFile": {
-            "path": "${CLAUDE_CONFIG_DIR:-~}/.claude.json",
+            "path": ["{{account.folder}}/.claude.json", "${CLAUDE_CONFIG_DIR:-~}/.claude.json"],
             "keys": ["projects", "{{cliDirectory}}", "hasTrustDialogAccepted"],
             "value": true
           }
@@ -161,7 +153,7 @@
         "firstOf": [
           {
             "jsonFile": {
-              "path": "~/.claude/.credentials.json",
+              "path": "{{account.folder}}/.credentials.json",
               "token": "$.claudeAiOauth.accessToken",
               "refreshToken": "$.claudeAiOauth.refreshToken",
               "expiresAt": "$.claudeAiOauth.expiresAt",
@@ -171,6 +163,15 @@
           {
             "keychain": {
               "service": "Claude Code-credentials",
+              "token": "$.claudeAiOauth.accessToken",
+              "refreshToken": "$.claudeAiOauth.refreshToken",
+              "expiresAt": "$.claudeAiOauth.expiresAt",
+              "subscriptionType": "$.claudeAiOauth.subscriptionType"
+            }
+          },
+          {
+            "keychain": {
+              "service": "Claude Code-credentials-{{account.folder#sha256.8}}",
               "token": "$.claudeAiOauth.accessToken",
               "refreshToken": "$.claudeAiOauth.refreshToken",
               "expiresAt": "$.claudeAiOauth.expiresAt",
@@ -213,18 +214,9 @@
       "cache": {
         "ttl": 900
       },
-      "context": {
-        "account": {
-          "path": "${CLAUDE_CONFIG_DIR:-~}/.claude.json",
-          "email": "$.oauthAccount.emailAddress",
-          "organization": "$.oauthAccount.displayName",
-          "billingType": "$.oauthAccount.billingType"
-        }
-      },
       "mapping": {
         "json": {
           "notAnObject": "Failed to parse usage response",
-          "email": ["$context.account.email"],
           "plan": {
             "path": "$credential.subscriptionType",
             "plans": {
@@ -363,7 +355,7 @@
   },
   "usageHistory": {
     "records": {
-      "files": "${CLAUDE_CONFIG_DIR:-~/.claude}/projects/**/*.jsonl",
+      "files": "{{account.folder}}/projects/**/*.jsonl",
       "format": "jsonLines",
       "where": { "path": "$.type", "equals": "assistant" },
       "at": "$.timestamp",
@@ -380,7 +372,7 @@
     "prices": { "file": "claude-prices.json" },
     "freeWhen": {
       "localEndpoint": {
-        "file": "${CLAUDE_CONFIG_DIR:-~}/.claude.json",
+        "file": ["{{account.folder}}/.claude.json", "${CLAUDE_CONFIG_DIR:-~}/.claude.json"],
         "url": ["$.env.ANTHROPIC_BASE_URL", ["$.providers[*].base_url", "$.providers[*].env.ANTHROPIC_BASE_URL"]]
       }
     },
@@ -398,183 +390,30 @@
     ]
   },
   "accounts": {
-    "signIn": {
-      "cli": "claude",
-      "args": ["auth", "login", "--claudeai"],
-      "homeVariable": "CLAUDE_CONFIG_DIR",
-      "unset": [
-        "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE",
-        "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY"
-      ]
-    },
     "folder": {
-      "savedAs": "configDirectory",
       "default": "${CLAUDE_CONFIG_DIR:-~/.claude}",
-      "accountId": { "field": "$context.account.email", "savedAs": "loginEmail" },
-      "email": "$context.account.email",
-      "derived": {
-        "credentialService": { "prefix": "Claude Code-credentials-", "sha256": 8 }
+      "signedInAs": {
+        "file": ["{{account.folder}}/.claude.json", "${CLAUDE_CONFIG_DIR:-~}/.claude.json"],
+        "id": "$.oauthAccount.emailAddress",
+        "email": "$.oauthAccount.emailAddress",
+        "organization": "$.oauthAccount.displayName",
+        "billingType": "$.oauthAccount.billingType"
       },
       "notSignedIn": "No Claude login found in this folder. Run `CLAUDE_CONFIG_DIR=<folder> claude` and sign in, then choose the folder again."
     },
-    "patch": {
-      "usageHistory": {
-        "records": { "files": "{{account.configDirectory}}/projects/**/*.jsonl" },
-        "freeWhen": { "localEndpoint": { "file": "{{account.configDirectory}}/.claude.json" } },
-        "otherApps": null
-      },
-      "cli": {
-        "fetch": {
-          "cli": {
-            "environment": {
-              "unset": [
-                "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE",
-                "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY"
-              ],
-              "set": {
-                "CLAUDE_CONFIG_DIR": "{{account.configDirectory}}"
-              }
-            }
-          }
-        },
-        "credential": {
-          "firstOf": [
-            {
-              "jsonFile": {
-                "path": "{{account.configDirectory}}/.credentials.json",
-                "token": "$.claudeAiOauth.accessToken",
-                "refreshToken": "$.claudeAiOauth.refreshToken",
-                "expiresAt": "$.claudeAiOauth.expiresAt",
-                "subscriptionType": "$.claudeAiOauth.subscriptionType"
-              }
-            },
-            {
-              "keychain": {
-                "service": "{{account.credentialService}}",
-                "token": "$.claudeAiOauth.accessToken",
-                "refreshToken": "$.claudeAiOauth.refreshToken",
-                "expiresAt": "$.claudeAiOauth.expiresAt",
-                "subscriptionType": "$.claudeAiOauth.subscriptionType"
-              }
-            }
-          ]
-        },
-        "context": {
-          "account": {
-            "path": "{{account.configDirectory}}/.claude.json",
-            "email": "$.oauthAccount.emailAddress",
-            "organization": "$.oauthAccount.displayName",
-            "billingType": "$.oauthAccount.billingType"
-          }
-        },
-        "requiresFiles": ["{{account.configDirectory}}/.claude.json"],
-        "recover": {
-          "folderTrustRequired": {
-            "patchJSONFile": {
-              "path": "{{account.configDirectory}}/.claude.json",
-              "keys": ["projects", "{{cliDirectory}}", "hasTrustDialogAccepted"],
-              "value": true
-            }
-          }
-        },
-        "identity": {
-          "field": "$context.account.email",
-          "equals": "{{account.loginEmail}}",
-          "hint": "Reconnect the original Claude account in this folder, or remove it and add the new login."
-        }
-      },
-      "cliCost": {
-        "fetch": {
-          "cli": {
-            "environment": {
-              "unset": [
-                "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE",
-                "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY"
-              ],
-              "set": {
-                "CLAUDE_CONFIG_DIR": "{{account.configDirectory}}"
-              }
-            }
-          }
-        },
-        "credential": {
-          "firstOf": [
-            {
-              "jsonFile": {
-                "path": "{{account.configDirectory}}/.credentials.json",
-                "token": "$.claudeAiOauth.accessToken",
-                "refreshToken": "$.claudeAiOauth.refreshToken",
-                "expiresAt": "$.claudeAiOauth.expiresAt",
-                "subscriptionType": "$.claudeAiOauth.subscriptionType"
-              }
-            },
-            {
-              "keychain": {
-                "service": "{{account.credentialService}}",
-                "token": "$.claudeAiOauth.accessToken",
-                "refreshToken": "$.claudeAiOauth.refreshToken",
-                "expiresAt": "$.claudeAiOauth.expiresAt",
-                "subscriptionType": "$.claudeAiOauth.subscriptionType"
-              }
-            }
-          ]
-        },
-        "context": {
-          "account": {
-            "path": "{{account.configDirectory}}/.claude.json",
-            "email": "$.oauthAccount.emailAddress",
-            "organization": "$.oauthAccount.displayName",
-            "billingType": "$.oauthAccount.billingType"
-          }
-        },
-        "requiresFiles": ["{{account.configDirectory}}/.claude.json"],
-        "identity": {
-          "field": "$context.account.email",
-          "equals": "{{account.loginEmail}}",
-          "hint": "Reconnect the original Claude account in this folder, or remove it and add the new login."
-        }
-      },
-      "api": {
-        "credential": {
-          "firstOf": [
-            {
-              "jsonFile": {
-                "path": "{{account.configDirectory}}/.credentials.json",
-                "token": "$.claudeAiOauth.accessToken",
-                "refreshToken": "$.claudeAiOauth.refreshToken",
-                "expiresAt": "$.claudeAiOauth.expiresAt",
-                "subscriptionType": "$.claudeAiOauth.subscriptionType"
-              }
-            },
-            {
-              "keychain": {
-                "service": "{{account.credentialService}}",
-                "token": "$.claudeAiOauth.accessToken",
-                "refreshToken": "$.claudeAiOauth.refreshToken",
-                "expiresAt": "$.claudeAiOauth.expiresAt",
-                "subscriptionType": "$.claudeAiOauth.subscriptionType"
-              }
-            }
-          ]
-        },
-        "context": {
-          "account": {
-            "path": "{{account.configDirectory}}/.claude.json",
-            "email": "$.oauthAccount.emailAddress",
-            "organization": "$.oauthAccount.displayName",
-            "billingType": "$.oauthAccount.billingType"
-          }
-        },
-        "mapping": {
-          "json": {
-            "email": ["$context.account.email"]
-          }
-        },
-        "identity": {
-          "field": "$context.account.email",
-          "equals": "{{account.loginEmail}}",
-          "hint": "Reconnect the original Claude account in this folder, or remove it and add the new login."
-        }
+    "signIn": { "args": ["auth", "login", "--claudeai"] },
+    "cli": {
+      "environment": {
+        "set": { "CLAUDE_CONFIG_DIR": "{{account.folder}}" },
+        "unset": [
+          "CLAUDE_CODE_OAUTH_TOKEN",
+          "ANTHROPIC_API_KEY",
+          "ANTHROPIC_AUTH_TOKEN",
+          "ANTHROPIC_PROFILE",
+          "CLAUDE_CODE_USE_BEDROCK",
+          "CLAUDE_CODE_USE_VERTEX",
+          "CLAUDE_CODE_USE_FOUNDRY"
+        ]
       }
     }
   }

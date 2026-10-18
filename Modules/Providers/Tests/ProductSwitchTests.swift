@@ -9,7 +9,7 @@ import Testing
 @Suite
 struct ProductSwitchTests {
     private func work() -> ProviderAccountConfig {
-        ProviderAccountConfig(accountId: "work", label: "work", probeConfig: ["codexHome": "/tmp/work", "chatgptAccountId": "work"])
+        ProviderAccountConfig(accountId: "work", label: "work", probeConfig: ["folder": "/tmp/work", "accountId": "work"])
     }
 
     private func codex(_ settings: InMemoryProviderSettings) throws -> Provider {

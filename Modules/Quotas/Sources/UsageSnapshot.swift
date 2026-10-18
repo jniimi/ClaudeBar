@@ -151,6 +151,19 @@ public struct UsageSnapshot: Sendable, Equatable {
         )
     }
 
+    /// The same usage naming who is signed in, where the answer named no one
+    /// — what *Signed in as …* says.
+    public func signedIn(email: String?, organization: String?) -> UsageSnapshot {
+        guard (accountEmail == nil && email != nil) || (accountOrganization == nil && organization != nil) else { return self }
+        return UsageSnapshot(
+            providerId: providerId, quotas: quotas, capturedAt: capturedAt,
+            accountEmail: accountEmail ?? email, accountOrganization: accountOrganization ?? organization,
+            loginMethod: loginMethod, accountTier: accountTier, costUsage: costUsage,
+            dailyUsageReport: dailyUsageReport,
+            extensionMetrics: extensionMetrics
+        )
+    }
+
     /// The overall status is the worst status among all quotas.
     /// This is a domain rule: overall health reflects the most critical issue.
     public var overallStatus: QuotaStatus {

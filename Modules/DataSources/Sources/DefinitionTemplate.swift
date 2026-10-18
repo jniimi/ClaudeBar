@@ -1,22 +1,15 @@
 import Crypto
 import Foundation
 
-/// A definition adapted to one login, as data: an RFC 7396 merge patch for
-/// what differs, then the login's values for `{{account.x}}`. The definition
-/// is written once; nothing is copied per login. A data source and a usage
-/// history are both adapted this way.
+/// A definition read for one account: its values fill `{{account.x}}`. The
+/// definition is written once; nothing is copied per account. A data source
+/// and a usage history are both read this way.
 public protocol DefinitionTemplate: Codable {}
 
 extension DataSourceDefinition: DefinitionTemplate {}
 extension UsageLog.Definition: DefinitionTemplate {}
 
 extension DefinitionTemplate {
-    /// The definition with `patch` merged in (RFC 7396): an object merges key
-    /// by key, `null` removes a field, anything else replaces it.
-    public func patched(with patch: JSONValue) throws -> Self {
-        try Self.decoded(json().merged(with: patch))
-    }
-
     /// The definition with every `{{<scope>.<name>}}` in its strings replaced
     /// by `values[name]`. Other placeholders — `{{token}}` — are left for the
     /// fetch; a name the values lack stays, and `unfilled(scope:)` reports it.
@@ -106,21 +99,6 @@ enum Placeholders {
 }
 
 extension JSONValue {
-    /// RFC 7396 JSON Merge Patch.
-    public func merged(with patch: JSONValue) -> JSONValue {
-        guard case .object(let changes) = patch else { return patch }
-        var result: [String: JSONValue]
-        if case .object(let fields) = self { result = fields } else { result = [:] }
-        for (key, change) in changes {
-            if case .null = change {
-                result.removeValue(forKey: key)
-            } else {
-                result[key] = (result[key] ?? .null).merged(with: change)
-            }
-        }
-        return .object(result)
-    }
-
     /// The same value with `transform` applied to every string, keys excepted.
     func mapStrings(_ transform: (String) -> String) -> JSONValue {
         switch self {

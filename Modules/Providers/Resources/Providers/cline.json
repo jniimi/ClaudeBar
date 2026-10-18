@@ -69,10 +69,5 @@
         "http.403": { "sessionExpired": "Run `cline auth` or paste a new API key." }
       }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "api": { "credential": { "firstOf": null, "setting": "apiKey", "with": { "scheme": "" } } }
-    }
-  }
+  ]
 }

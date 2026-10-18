@@ -732,7 +732,27 @@ extension JSONSettingsRepository: MultiAccountSettingsRepository {
 
     public func accounts(forProvider id: String) -> [ProviderAccountConfig] {
         guard let raw: [Any] = store.read(key: Self.accountsKey(id)) else { return [] }
-        return raw.compactMap(Self.decodeAccount)
+        return raw.compactMap(Self.decodeAccount).map { Self.renamingValues(of: $0, forProvider: id) }
+    }
+
+    /// Values an added account kept under its definition's own name before
+    /// a checked folder's became `folder` and its signed-in id `accountId`
+    /// (#577). A migrating provider adds a row here, never a branch; the
+    /// next save writes the new names.
+    private static let renamedAccountValues = [
+        "codex": ["codexHome": "folder", "chatgptAccountId": "accountId"],
+        "claude": ["configDirectory": "folder", "loginEmail": "accountId"],
+    ]
+
+    private static func renamingValues(of config: ProviderAccountConfig, forProvider id: String) -> ProviderAccountConfig {
+        guard let renames = renamedAccountValues[id] else { return config }
+        var values = config.probeConfig
+        for (old, new) in renames {
+            if let value = values.removeValue(forKey: old), values[new] == nil { values[new] = value }
+        }
+        guard values != config.probeConfig else { return config }
+        return ProviderAccountConfig(accountId: config.accountId, label: config.label, email: config.email,
+                                     organization: config.organization, probeConfig: values, madeBy: config.madeBy)
     }
 
     public func addAccount(_ config: ProviderAccountConfig, forProvider id: String) {

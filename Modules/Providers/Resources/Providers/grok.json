@@ -24,7 +24,7 @@
       "summary": "Reads your Grok credits and plan with the `grok` CLI's login",
       "credential": {
         "jsonFile": {
-          "path": "~/.grok/auth.json",
+          "path": "{{account.directory}}/auth.json",
           "token": "$.key",
           "refreshToken": "$.refresh_token",
           "email": "$.email",
@@ -75,13 +75,5 @@
         "http.403": { "sessionExpired": "Run `grok login` in terminal to log in again." }
       }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "api": {
-        "requiresFiles": ["{{account.directory}}/auth.json"],
-        "credential": { "jsonFile": { "path": "{{account.directory}}/auth.json" } }
-      }
-    }
-  }
+  ]
 }

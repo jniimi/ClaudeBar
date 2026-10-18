@@ -38,8 +38,5 @@
         }
       }
     }
-  ],
-  "accounts": {
-    "patch": { "api": { "credential": { "firstOf": null, "setting": "apiKey" } } }
-  }
+  ]
 }

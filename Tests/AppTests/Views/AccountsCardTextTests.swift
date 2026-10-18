@@ -19,7 +19,7 @@ struct AccountsCardTextTests {
 
     private func login(_ id: String, folder: String, madeBy: AccountOrigin) -> ProviderAccountConfig {
         ProviderAccountConfig(accountId: id, label: "", email: "\(id)@example.com",
-                              probeConfig: ["codexHome": folder, "chatgptAccountId": id], madeBy: madeBy)
+                              probeConfig: ["folder": folder, "accountId": id], madeBy: madeBy)
     }
 
     @Test

@@ -501,15 +501,16 @@ struct ClaudeCLIDefinitionTests {
         }
         #expect(rpc.cli == "/opt/tools/bin/codex-work")
         #expect(tty.cli == "/opt/tools/bin/codex-work")
-        #expect(definition.accounts?.signIn?.cli == "/opt/tools/bin/codex-work")
-        #expect(definition.accounts?.signIn?.args == (try ProviderFactory.builtIn("codex")).accounts?.signIn?.args)
+        let signIn = try #require(try definition.signInCall(into: "/accounts/codex/new"))
+        #expect(signIn.cli == "/opt/tools/bin/codex-work")
+        #expect(signIn.args == ["-c", "cli_auth_credentials_store=\"file\"", "login"])
     }
 
     @Test
     func `should sign in to Claude with the CLI at the chosen location`() throws {
         let definition = try ProviderFactory.builtIn("claude").runningCLI("/opt/tools/bin/claude-work")
 
-        #expect(definition.accounts?.signIn?.cli == "/opt/tools/bin/claude-work")
+        #expect(try definition.signInCall(into: "/accounts/claude/new")?.cli == "/opt/tools/bin/claude-work")
     }
 
     @Test

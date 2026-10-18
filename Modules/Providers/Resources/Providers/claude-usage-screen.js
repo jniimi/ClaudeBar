@@ -16,7 +16,7 @@ function read(response, context) {
   var screen = response.text;
   var lower = screen.toLowerCase();
   var lines = splitLines(screen);
-  var account = context.account || {};
+  var account = context.signedInAs || {};
   var subscriptionBilled = typeof account.billingType === "string" && /_subscription$/.test(account.billingType);
 
   var error = usageError(lower);

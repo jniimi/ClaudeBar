@@ -137,7 +137,9 @@ public struct DataSource: Sendable {
             context: contextFiles.mapValues { $0.fields() }
         )
         do {
+            let who = facts.context[SignedInAs.name] ?? [:]
             return try mapper.read(response, facts: facts, providerId: providerId)
+                .signedIn(email: who["email"], organization: who["organization"])
         } catch {
             throw DataSourceError.wrap(error, as: .mapping)
         }

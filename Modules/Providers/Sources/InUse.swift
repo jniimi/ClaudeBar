@@ -113,16 +113,27 @@ public final class InUse {
     }
 }
 
-/// The command new terminal sessions run, and the variable that starts it on
-/// a login's folder: `claude` with `CLAUDE_CONFIG_DIR`.
+/// The command new terminal sessions run, and the variables that start it on
+/// a login's folder: `claude` with `CLAUDE_CONFIG_DIR` — what the
+/// definition's `accounts.cli` sets, `{{account.folder}}` standing for the
+/// folder.
 public struct TerminalCommand: Sendable, Equatable {
     /// The CLI — and the name its choice is recorded under.
     public let name: String
-    public let variable: String
+    public let environment: [String: String]
 
-    public init(name: String, variable: String) {
+    public init(name: String, environment: [String: String]) {
         self.name = name
-        self.variable = variable
+        self.environment = environment
+    }
+
+    /// `CODEX_HOME="$d"` — each variable, in name order, set as it is for a
+    /// login whose folder the shell holds in `folder`.
+    public func assignments(folder: String, quoted: Bool = true) -> String {
+        environment.sorted { $0.key < $1.key }.map { name, value in
+            let value = value.replacingOccurrences(of: "{{account.\(ProviderDefinition.Accounts.folderValue)}}", with: folder)
+            return quoted ? "\(name)=\"\(value)\"" : "\(name)=\(value)"
+        }.joined(separator: " ")
     }
 }
 

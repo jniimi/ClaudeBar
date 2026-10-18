@@ -56,13 +56,6 @@
       "mapping": { "script": { "file": "mistral-plan.js" } }
     }
   ],
-  "accounts": {
-    "patch": {
-      "web": {
-        "credential": { "firstOf": null, "setting": "cookie" }
-      }
-    }
-  },
   "usageHistory": {
     "records": {
       "files": "~/.vibe/logs/session/session_*/meta.json",

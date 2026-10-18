@@ -80,8 +80,8 @@ struct AccountFormTests {
 
         let added = try #require(try definition.dataSources(forAccount: [:]).first)
 
-        #expect(definition.dataSources.first?.credential == .environment("EXAMPLE_API_KEY"))
-        #expect(added.credential == .setting("apiKey"))
+        #expect(definition.dataSources.first?.credential == .firstOf([.environment("EXAMPLE_API_KEY"), .setting("apiKey")]))
+        #expect(added.credential == .firstOf([.setting("apiKey")]))
     }
 
     // MARK: - Each account, its own key

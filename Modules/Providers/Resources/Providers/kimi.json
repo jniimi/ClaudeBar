@@ -52,7 +52,8 @@
       "credential": {
         "firstOf": [
           { "environment": "KIMI_AUTH_TOKEN" },
-          { "browserCookies": { "domains": ["{{setting.region.domain}}"], "names": ["kimi-auth"] } }
+          { "browserCookies": { "domains": ["{{setting.region.domain}}"], "names": ["kimi-auth"] } },
+          { "setting": "token" }
         ]
       },
       "fetch": {
@@ -81,20 +82,10 @@
     }
   ],
   "accounts": {
-    "patch": {
-      "api": {
-        "credential": { "firstOf": null, "setting": "token" }
-      },
-      "cli": {
-        "fetch": {
-          "cli": {
-            "environment": {
-              "unset": ["KIMI_AUTH_TOKEN", "KIMI_API_KEY", "KIMI_BASE_URL"],
-              "set": { "KIMI_SHARE_DIR": "{{account.home}}", "KIMI_CODE_HOME": "{{account.home}}" }
-            }
-          }
-        },
-        "requiresFiles": ["{{account.home}}"]
+    "cli": {
+      "environment": {
+        "set": { "KIMI_SHARE_DIR": "{{account.home}}", "KIMI_CODE_HOME": "{{account.home}}" },
+        "unset": ["KIMI_AUTH_TOKEN", "KIMI_API_KEY", "KIMI_BASE_URL"]
       }
     }
   }

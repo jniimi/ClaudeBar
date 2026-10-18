@@ -369,19 +369,21 @@ extension UsageLog {
 
     /// An unpriced model costs nothing when a base URL in `file` is on this Mac.
     public struct LocalEndpointRule: Sendable, Equatable, Codable {
-        public let file: String
+        /// The tool's settings file — a list where the tool keeps it in
+        /// another place for the default account.
+        public let file: PathPattern
         /// The first entry that answers decides; a list of paths is one entry,
         /// and `[*]` walks every element of a list.
         public let url: [[String]]
 
-        public init(file: String, url: [[String]]) {
+        public init(file: PathPattern, url: [[String]]) {
             self.file = file
             self.url = url
         }
 
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            file = try container.decode(String.self, forKey: .file)
+            file = try container.decode(PathPattern.self, forKey: .file)
             var entries = try container.nestedUnkeyedContainer(forKey: .url)
             var url: [[String]] = []
             while !entries.isAtEnd {
@@ -485,7 +487,7 @@ extension DataSources {
             reader: LogReader(definition.records, expand: expand, platform: platform,
                               homeDirectory: homeDirectory, environment: pathsEnvironment),
             prices: definition.prices.flatMap { PriceList.load($0.file, from: scripts) },
-            localEndpoint: definition.freeWhen?.localEndpoint.map { LocalEndpoint(file: expand($0.file), url: $0.url) },
+            localEndpoint: definition.freeWhen?.localEndpoint.map { LocalEndpoint(file: Paths.resolve($0.file, homeDirectory: homeDirectory, environment: pathsEnvironment), url: $0.url) },
             calendar: platform.calendar,
             now: now,
             fingerprint: fingerprint

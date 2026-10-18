@@ -46,7 +46,7 @@ public struct ShellSetup: ShellLines {
                 function \(command.name)
                     set -l d (cat "\(record)" 2>/dev/null)
                     if test -n "$d"
-                        \(command.variable)=$d command \(command.name) $argv
+                        \(command.assignments(folder: "$d", quoted: false)) command \(command.name) $argv
                     else
                         command \(command.name) $argv
                     end
@@ -60,7 +60,7 @@ public struct ShellSetup: ShellLines {
             return """
             \(alias == nil ? "" : "unalias \(command.name) 2>/dev/null\n")function \(command.name) {
               local d; d="$(cat "\(record)" 2>/dev/null)"
-              if [ -n "$d" ]; then \(command.variable)="$d" \(program) "$@"; else \(program) "$@"; fi
+              if [ -n "$d" ]; then \(command.assignments(folder: "$d")) \(program) "$@"; else \(program) "$@"; fi
             }
             """
         }

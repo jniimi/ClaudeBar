@@ -1,37 +1,23 @@
 import Foundation
 import Mockable
 
-/// *Sign in with browser* as data: the vendor's own login command, and the
-/// variable that points it at a folder of its own.
-///
-/// `{ "cli": "codex", "args": ["login"], "homeVariable": "CODEX_HOME",
-///    "unset": ["OPENAI_API_KEY"] }`
-public struct SignInCall: Sendable, Equatable, Codable {
+/// *Sign in with browser*: the vendor's own login command, run with the
+/// environment that points it at a new folder of its own — what the
+/// provider's `accounts.cli` says, filled with that folder.
+public struct SignInCall: Sendable, Equatable {
     public let cli: String
     public let args: [String]
-    /// Set to the new folder, so the login lands there and nowhere else.
-    public let homeVariable: String
-    /// Inherited variables that would pick another way to sign in — a key in
-    /// the person's shell must not decide which account this becomes.
-    public let unset: [String]
+    /// Set to the folder, so the login lands there and nowhere else, and
+    /// without the variables that would pick another way to sign in.
+    public let environment: ProcessEnvironment
     /// Seconds to wait for the person to finish in the browser.
     public let timeout: TimeInterval
 
-    public init(cli: String, args: [String], homeVariable: String, unset: [String] = [], timeout: TimeInterval = 300) {
+    public init(cli: String, args: [String], environment: ProcessEnvironment = ProcessEnvironment(), timeout: TimeInterval = 300) {
         self.cli = cli
         self.args = args
-        self.homeVariable = homeVariable
-        self.unset = unset
+        self.environment = environment
         self.timeout = timeout
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        cli = try container.decode(String.self, forKey: .cli)
-        args = try container.decode([String].self, forKey: .args)
-        homeVariable = try container.decode(String.self, forKey: .homeVariable)
-        unset = try container.decodeIfPresent([String].self, forKey: .unset) ?? []
-        timeout = try container.decodeIfPresent(TimeInterval.self, forKey: .timeout) ?? 300
     }
 }
 
@@ -109,8 +95,8 @@ public struct AccountSignIn: Sendable {
     /// another way in.
     private func run(_ call: SignInCall, _ executable: String, in folder: URL) async throws {
         var variables = environment()
-        for name in call.unset { variables.removeValue(forKey: name) }
-        variables[call.homeVariable] = folder.path
+        for name in call.environment.unset { variables.removeValue(forKey: name) }
+        variables.merge(call.environment.set) { _, new in new }
         let status = try await process.run(executable: executable, arguments: call.args, environment: variables,
                                            directory: folder, timeout: call.timeout)
         guard status == 0 else { throw SignInError.didNotFinish }

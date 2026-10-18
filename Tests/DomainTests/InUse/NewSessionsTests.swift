@@ -29,7 +29,7 @@ struct NewSessionsTests {
     private func codex() -> Provider {
         let settings = JSONSettingsRepository(store: JSONSettingsStore(fileURL: temp.appendingPathComponent("settings.json")))
         let work = ProviderAccountConfig(accountId: "work", label: "work",
-                                         probeConfig: ["codexHome": "/Users/you/.codex-work", "chatgptAccountId": "work"])
+                                         probeConfig: ["folder": "/Users/you/.codex-work", "accountId": "work"])
         return try! ProviderFactory.make("codex", settings: settings, accounts: [work],
                                    loginsInUse: DiskLoginsInUse(root: temp.appendingPathComponent("in-use")))
     }

@@ -113,7 +113,7 @@ public final class Account: Identifiable {
 
     /// Where the login lives, for a login added by its folder.
     public var folder: SignedInFolder? {
-        guard !isDefault, let rule = definition.accounts?.folder, let path = values[rule.savedAs] else { return nil }
+        guard !isDefault, definition.accounts?.folder != nil, let path = values[ProviderDefinition.Accounts.folderValue] else { return nil }
         return SignedInFolder(url: URL(fileURLWithPath: path), madeBy: madeBy ?? .folder)
     }
 

@@ -37,8 +37,9 @@ struct AccountsCardText {
 
     /// The login a person runs themselves to sign in to `folder`.
     func signInCommand(in folder: String) -> String? {
-        guard let call = provider.definition.accounts?.signIn else { return nil }
-        return (["\(call.homeVariable)=\(Self.shellQuoted(folder))", call.cli] + call.args.map(Self.shellQuoted)).joined(separator: " ")
+        guard let call = try? provider.definition.signInCall(into: folder) else { return nil }
+        let variables = call.environment.set.sorted { $0.key < $1.key }.map { "\($0.key)=\(Self.shellQuoted($0.value))" }
+        return (variables + [call.cli] + call.args.map(Self.shellQuoted)).joined(separator: " ")
     }
 
     func removeMessage(for account: Account) -> String {

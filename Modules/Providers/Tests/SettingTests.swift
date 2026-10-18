@@ -140,9 +140,9 @@ struct FakePaths: PathChecking {
     }
     @Test func `should restore a signed-in folder as the absolute path its CLI needs`() throws {
         let owner = try provider("codex", accounts: [ProviderAccountConfig(
-            accountId: "work", label: "Work", probeConfig: ["codexHome": "~/work", "chatgptAccountId": "work-id"], madeBy: .folder)])
+            accountId: "work", label: "Work", probeConfig: ["folder": "~/work", "accountId": "work-id"], madeBy: .folder)])
         let account = try #require(owner.accounts.first { $0.accountId == "work" })
-        #expect(account.values["codexHome"] == "/Users/me/work")
+        #expect(account.values["folder"] == "/Users/me/work")
         let rpc = try #require(owner.dataSources(for: account).first { $0.kind == "rpc" })
         guard case .jsonRpc(let call) = rpc.definition.fetch else {
             Issue.record("Expected an RPC fetch")

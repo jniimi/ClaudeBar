@@ -180,15 +180,5 @@
         }
       }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "cookie": {
-        "credential": {
-          "firstOf": null,
-          "setting": "cookie"
-        }
-      }
-    }
-  }
+  ]
 }

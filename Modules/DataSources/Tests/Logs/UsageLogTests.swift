@@ -225,11 +225,11 @@ struct UsageLogTests {
                               { "where": { "path": "$.kind", "equals": "side" }, "at": "$.at", "tokens": { "total": "$.n" } }] } }
     """#
 
-    @Test func `should keep a log's shapes when an added login's patch moves its files`() throws {
-        let definition = try JSONDecoder().decode(UsageLog.Definition.self, from: Data(Self.twoShapes.utf8))
-        let patch = JSONValue.object(["records": .object(["files": .string("{{account.dir}}/*.jsonl")])])
+    @Test func `should keep a log's shapes when an added account reads it from its own folder`() throws {
+        let json = Self.twoShapes.replacingOccurrences(of: "~/x/*.jsonl", with: "{{account.dir}}/*.jsonl")
+        let definition = try JSONDecoder().decode(UsageLog.Definition.self, from: Data(json.utf8))
 
-        let moved = try definition.patched(with: patch).filled(["dir": "/tmp/work"], scope: "account")
+        let moved = try #require(try definition.forAccount(["dir": "/tmp/work"]))
 
         #expect(moved.records.source == .files(glob: "/tmp/work/*.jsonl", format: .jsonLines))
         #expect(moved.records.shapes == definition.records.shapes)

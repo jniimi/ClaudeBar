@@ -19,7 +19,7 @@ struct ProductTabsTests {
 
     private func login(_ id: String) -> ProviderAccountConfig {
         ProviderAccountConfig(accountId: id, label: id.capitalized, email: "\(id)@example.com",
-                              probeConfig: ["codexHome": "/tmp/\(id)", "chatgptAccountId": id])
+                              probeConfig: ["folder": "/tmp/\(id)", "accountId": id])
     }
 
     private func lineup() throws -> (claude: Provider, codex: Provider, all: [Account], providers: Providers) {

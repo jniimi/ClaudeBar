@@ -35,7 +35,7 @@ struct ClaudeHarness {
     /// One of `claude.json`'s data sources: `cli`, `cliCost` or `api`.
     func dataSource(_ kind: String) throws -> DataSource {
         let definition = try ProviderFactory.builtIn("claude")
-        guard let source = definition.dataSource(kind) else { throw DefinitionError.unknownDataSource("claude", kind) }
+        guard let source = try definition.asDefaultAccount(kind) else { throw DefinitionError.unknownDataSource("claude", kind) }
         return make(source)
     }
 
@@ -99,7 +99,7 @@ struct ClaudeHarness {
         let definition = try ProviderFactory.builtIn("claude")
         let now = self.now
         let source = DataSources.make(
-            definition.dataSource("api")!,
+            try definition.asDefaultAccount("api")!,
             providerId: "claude",
             cliExecutor: cli,
             network: network,

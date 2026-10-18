@@ -58,7 +58,7 @@
       "summary": "Reads your Gemini Code Assist quota with the Gemini CLI's login",
       "credential": {
         "jsonFile": {
-          "path": "~/.gemini/oauth_creds.json",
+          "path": "{{account.home}}/.gemini/oauth_creds.json",
           "token": "$.access_token"
         },
         "refresh": {
@@ -66,6 +66,7 @@
             "cli": "gemini",
             "input": "/quit\n",
             "timeout": 15,
+            "workingDirectory": "dedicated",
             "environment": {
               "unset": [
                 "GEMINI_CLI_HOME",
@@ -128,36 +129,19 @@
     }
   ],
   "accounts": {
-    "patch": {
-      "api": {
-        "credential": {
-          "jsonFile": {
-            "path": "{{account.home}}/.gemini/oauth_creds.json"
-          },
-          "refresh": {
-            "cli": {
-              "workingDirectory": "dedicated",
-              "environment": {
-                "unset": [
-                  "GEMINI_API_KEY",
-                  "GOOGLE_API_KEY",
-                  "GOOGLE_GENAI_USE_VERTEXAI",
-                  "GOOGLE_APPLICATION_CREDENTIALS",
-                  "GOOGLE_CLOUD_PROJECT",
-                  "GCLOUD_PROJECT"
-                ],
-                "set": {
-                  "GEMINI_CLI_HOME": "{{account.home}}"
-                }
-              }
-            }
-          }
+    "cli": {
+      "environment": {
+        "set": {
+          "GEMINI_CLI_HOME": "{{account.home}}"
         },
-        "requiresFiles": [
-          "{{account.home}}/.gemini/oauth_creds.json"
-        ],
-        "verifyBeforeBackground": true,
-        "unverifiedMessage": "Refresh this Gemini account once to check its separate login."
+        "unset": [
+          "GEMINI_API_KEY",
+          "GOOGLE_API_KEY",
+          "GOOGLE_GENAI_USE_VERTEXAI",
+          "GOOGLE_APPLICATION_CREDENTIALS",
+          "GOOGLE_CLOUD_PROJECT",
+          "GCLOUD_PROJECT"
+        ]
       }
     }
   }

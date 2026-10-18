@@ -34,8 +34,5 @@
         "http.403": { "sessionExpired": "Use an organization Admin API key; project keys can't read spend." }
       }
     }
-  ],
-  "accounts": {
-    "patch": { "api": { "credential": { "firstOf": null, "setting": "apiKey" } } }
-  }
+  ]
 }

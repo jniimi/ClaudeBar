@@ -191,21 +191,5 @@
         }
       }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "billing": {
-        "credential": {
-          "firstOf": null,
-          "setting": "token"
-        }
-      },
-      "copilotAPI": {
-        "credential": {
-          "firstOf": null,
-          "setting": "token"
-        }
-      }
-    }
-  }
+  ]
 }

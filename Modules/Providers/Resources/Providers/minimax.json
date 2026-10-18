@@ -39,10 +39,5 @@
       },
       "mapping": { "script": { "file": "minimax-remains.js" } }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "api": { "credential": { "firstOf": null, "setting": "apiKey" } }
-    }
-  }
+  ]
 }

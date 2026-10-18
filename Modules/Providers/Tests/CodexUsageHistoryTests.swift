@@ -12,7 +12,7 @@ struct CodexUsageHistoryTests {
     private let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
 
     private func history() throws -> UsageHistory {
-        let definition = try #require(try ProviderFactory.builtIn("codex").usageHistory)
+        let definition = try #require(try ProviderFactory.builtIn("codex").defaultAccountHistory)
         return UsageHistory(log: DataSources.makeUsageLog(definition, scripts: ProviderFactory.builtInScripts,
                                                           environment: { _ in nil }, homeDirectory: home))
     }
@@ -62,6 +62,18 @@ struct CodexUsageHistoryTests {
         #expect(today.totalTokens == 1030)
     }
 
+    @Test func `should show the default login's usage from where Codex keeps it on this Mac`() async throws {
+        try write(Self.turn(input: 1000, cached: 0, output: 50, totalInput: 1000, totalOutput: 50))
+        let codexHome = home.appendingPathComponent(".codex").path
+        let codex = try ProviderFactory.make("codex", settings: InMemoryProviderSettings(),
+                                             environment: { $0 == "CODEX_HOME" ? codexHome : nil })
+
+        let history = try #require(codex.defaultAccount.usageHistory)
+        await history.read()
+
+        #expect(history.report?.today.totalTokens == 1050)
+    }
+
     @Test func `should count a turn once when Codex writes it twice`() async throws {
         let turn = Self.turn(input: 1000, cached: 0, output: 50, totalInput: 1000, totalOutput: 50)
         try write([turn, turn].joined(separator: "\n"))
@@ -93,14 +105,14 @@ struct CodexUsageHistoryTests {
 
     @Test func `should show no cost for Codex's history, since its logs name no model`() throws {
         #expect(try !history().knowsCost)
-        let claude = try #require(try ProviderFactory.builtIn("claude").usageHistory)
+        let claude = try #require(try ProviderFactory.builtIn("claude").defaultAccountHistory)
         #expect(UsageHistory(log: DataSources.makeUsageLog(claude, scripts: ProviderFactory.builtInScripts,
                                                            environment: { _ in nil }, homeDirectory: home)).knowsCost)
     }
 
     @Test func `should read an added login's history from its own Codex folder`() throws {
         let definition = try ProviderFactory.builtIn("codex")
-        let account = try #require(definition.usageHistory(forAccount: ["codexHome": "/tmp/work-codex"]))
+        let account = try #require(definition.usageHistory(forAccount: ["folder": "/tmp/work-codex"]))
         #expect(account.records.source == .files(glob: "/tmp/work-codex/sessions/**/rollout-*.jsonl", format: .jsonLines))
     }
 }

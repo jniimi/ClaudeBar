@@ -57,7 +57,7 @@ struct AddProviderTests {
 
         let source = try #require(try draft.definition(id: "custom-x").dataSources.first)
 
-        #expect(source.credential == .environment("OPENROUTER_API_KEY"))
+        #expect(source.credential == .firstOf([.environment("OPENROUTER_API_KEY"), .setting("apiKey")]))
         guard case .http(let request) = source.fetch else { return }
         #expect(request.headers["X-API-Key"] == "{{token}}")
     }

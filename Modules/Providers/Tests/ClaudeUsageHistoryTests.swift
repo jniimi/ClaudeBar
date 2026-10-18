@@ -13,7 +13,7 @@ struct ClaudeUsageHistoryTests {
     private let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
 
     private func history() throws -> UsageHistory {
-        let definition = try #require(try ProviderFactory.builtIn("claude").usageHistory)
+        let definition = try #require(try ProviderFactory.builtIn("claude").defaultAccountHistory)
         return UsageHistory(log: DataSources.makeUsageLog(definition, scripts: ProviderFactory.builtInScripts,
                                                           environment: { _ in nil }, homeDirectory: home))
     }
@@ -199,9 +199,9 @@ struct ClaudeUsageHistoryTests {
         return Provider(
             definition: definition, settings: InMemoryProviderSettings(),
             accounts: [ProviderAccountConfig(accountId: "work", label: "", email: "work@example.com",
-                                             probeConfig: ["configDirectory": work.path, "loginEmail": "work@example.com", "credentialService": "fixture-work"])],
+                                             probeConfig: ["folder": work.path, "accountId": "work@example.com", "credentialService": "fixture-work"])],
             makeDataSource: { source, _ in DataSources.make(source, providerId: "claude") },
-            usageHistory: definition.usageHistory.map(make),
+            usageHistory: definition.defaultAccountHistory.map(make),
             makeUsageHistory: { history, _ in make(history) }
         )
     }
@@ -245,7 +245,7 @@ struct ClaudeUsageHistoryTests {
     }
 
     @Test func `should read an added login's logs and route from its config folder, and have no history without one`() throws {
-        let own = try #require(try ProviderFactory.builtIn("claude").usageHistory(forAccount: ["configDirectory": "/tmp/work"]))
+        let own = try #require(try ProviderFactory.builtIn("claude").usageHistory(forAccount: ["folder": "/tmp/work"]))
         #expect(own.records.source == .files(glob: "/tmp/work/projects/**/*.jsonl", format: .jsonLines))
         #expect(own.freeWhen?.localEndpoint?.file == "/tmp/work/.claude.json")
         #expect(own.freeWhen?.localEndpoint?.url.count == 2)
@@ -254,13 +254,13 @@ struct ClaudeUsageHistoryTests {
 
     @Test func `should leave the Mac's other apps out of an added login's history`() throws {
         #expect(try ProviderFactory.builtIn("claude").usageHistory?.otherApps?.map(\.label) == ["Claude Desktop"])
-        #expect(try ProviderFactory.builtIn("claude").usageHistory(forAccount: ["configDirectory": "/tmp/work"])?.otherApps == nil)
+        #expect(try ProviderFactory.builtIn("claude").usageHistory(forAccount: ["folder": "/tmp/work"])?.otherApps == nil)
     }
 
     // MARK: - Claude Desktop's buddy-tokens.json (#198)
 
     private func desktop() async throws -> UsageHistory {
-        let definition = try #require(try ProviderFactory.builtIn("claude").usageHistory)
+        let definition = try #require(try ProviderFactory.builtIn("claude").defaultAccountHistory)
         var platform = Platform.current
         platform.applicationData = { home, _ in home.appendingPathComponent("Library/Application Support") }
         let fixturePlatform = platform

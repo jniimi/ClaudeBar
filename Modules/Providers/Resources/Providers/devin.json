@@ -55,10 +55,5 @@
         "http.403": { "sessionExpired": "Sign in to app.devin.ai again, or paste a new session token." }
       }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "web": { "credential": { "firstOf": null, "setting": "token", "with": { "organization": "{{setting.organization}}" } } }
-    }
-  }
+  ]
 }

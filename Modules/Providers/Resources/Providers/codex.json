@@ -174,7 +174,7 @@
       "note": "API mode needs file-based ChatGPT credentials in each account’s Codex folder.",
       "credential": {
         "jsonFile": {
-          "path": "${CODEX_HOME:-~/.codex}/auth.json",
+          "path": "{{account.folder}}/auth.json",
           "token": "$.tokens.access_token",
           "refreshToken": "$.tokens.refresh_token",
           "account": "$.tokens.account_id",
@@ -362,7 +362,7 @@
   ],
   "usageHistory": {
     "records": {
-      "files": "${CODEX_HOME:-~/.codex}/sessions/**/rollout-*.jsonl",
+      "files": "{{account.folder}}/sessions/**/rollout-*.jsonl",
       "format": "jsonLines",
       "where": { "path": "$.payload.type", "equals": "token_count" },
       "at": "$.timestamp",
@@ -382,90 +382,29 @@
     "sessionGap": 1800
   },
   "accounts": {
-    "signIn": {
-      "cli": "codex",
-      "args": ["-c", "cli_auth_credentials_store=\"file\"", "login"],
-      "homeVariable": "CODEX_HOME",
-      "unset": [
-        "OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_AUTH_TOKEN", "OPENAI_ACCESS_TOKEN",
-        "OPENAI_IDENTITY_TOKEN_FILE", "OPENAI_IDENTITY_PROVIDER_ID"
-      ]
-    },
     "folder": {
-      "savedAs": "codexHome",
       "default": "${CODEX_HOME:-~/.codex}",
-      "accountId": {
-        "field": "account",
-        "savedAs": "chatgptAccountId"
+      "signedInAs": {
+        "file": "{{account.folder}}/auth.json",
+        "id": "$.tokens.account_id",
+        "email": "$.tokens.id_token#jwt.email"
       },
       "notSignedIn": "No ChatGPT account found in this folder. Sign in with Codex using file credential storage, then choose the folder again."
     },
-    "patch": {
-      "rpc": {
-        "credential": {
-          "jsonFile": {
-            "path": "{{account.codexHome}}/auth.json",
-            "token": "$.tokens.access_token",
-            "account": "$.tokens.account_id",
-            "email": "$.tokens.id_token#jwt.email"
-          }
-        },
-        "fetch": {
-          "jsonRpc": {
-            "args": [
-              "-s",
-              "read-only",
-              "-a",
-              "never",
-              "-c",
-              "cli_auth_credentials_store=\"file\"",
-              "app-server"
-            ],
-            "environment": {
-              "set": {
-                "CODEX_HOME": "{{account.codexHome}}"
-              },
-              "unset": [
-                "OPENAI_API_KEY",
-                "CODEX_API_KEY",
-                "OPENAI_ACCESS_TOKEN",
-                "OPENAI_IDENTITY_TOKEN_FILE",
-                "OPENAI_IDENTITY_PROVIDER_ID"
-              ]
-            }
-          }
-        },
-        "mapping": {
-          "json": {
-            "email": ["$.account.result.account.email", "$credential.email"]
-          }
-        },
-        "requiresFiles": ["{{account.codexHome}}/auth.json"],
-        "identity": {
-          "field": "account",
-          "equals": "{{account.chatgptAccountId}}",
-          "hint": "Sign in to the original account in this Codex folder, or remove it and add the new account in Settings."
-        },
-        "verifyBeforeBackground": null,
-        "unverifiedMessage": null,
-        "fallback": null
+    "signIn": { "args": ["login"] },
+    "cli": {
+      "environment": {
+        "set": { "CODEX_HOME": "{{account.folder}}" },
+        "unset": [
+          "OPENAI_API_KEY",
+          "CODEX_API_KEY",
+          "CODEX_AUTH_TOKEN",
+          "OPENAI_ACCESS_TOKEN",
+          "OPENAI_IDENTITY_TOKEN_FILE",
+          "OPENAI_IDENTITY_PROVIDER_ID"
+        ]
       },
-      "api": {
-        "credential": {
-          "jsonFile": {
-            "path": "{{account.codexHome}}/auth.json"
-          }
-        },
-        "identity": {
-          "field": "account",
-          "equals": "{{account.chatgptAccountId}}",
-          "hint": "Sign in to the original account in this Codex folder, or remove it and add the new account in Settings."
-        }
-      },
-      "tty": null,
-      "usageHistory": {
-        "records": { "files": "{{account.codexHome}}/sessions/**/rollout-*.jsonl" }
-      }
+      "args": ["-c", "cli_auth_credentials_store=\"file\""]
     }
   }
 }

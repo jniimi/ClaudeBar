@@ -84,9 +84,10 @@ public final class Provider {
         // holds it weakly (TARGET §2.1).
         accounts.start(plainHistory: usageHistory, guestPasses: guestPasses,
                        onChange: { [weak self] change in self?.follow(change) }, saved: saved)
-        if let loginsInUse, let call = definition.accounts?.signIn, definition.accounts?.folder != nil {
+        if let loginsInUse, let cli = definition.cli, definition.accounts?.signIn != nil, definition.accounts?.folder != nil,
+           let set = definition.accounts?.cli?.environment.set, !set.isEmpty {
             inUse = InUse(accounts: accounts, productId: definition.id, productName: definition.profile.name,
-                          command: TerminalCommand(name: call.cli, variable: call.homeVariable),
+                          command: TerminalCommand(name: cli, environment: set),
                           record: loginsInUse, switchWhenLow: SwitchWhenLow(providerId: definition.id, settings: settings))
         }
     }
@@ -222,7 +223,7 @@ public final class Provider {
         }
         do {
             let response = try await active.fetchResponse()
-            if active.definition.verifyBeforeBackground {
+            if active.definition.verifyBeforeBackground, account.isDefault {
                 markVerified()
             }
             return .success(response)
@@ -280,12 +281,12 @@ public final class Provider {
             usage = try await task.value
         } catch {
             // Signed out since it was checked: held back again until a click (#525).
-            if active.definition.verifyBeforeBackground, Self.isSignedOut(error) {
+            if active.definition.verifyBeforeBackground, account.isDefault, Self.isSignedOut(error) {
                 forgetVerified()
             }
             throw error
         }
-        if kind == .interactive, active.definition.verifyBeforeBackground {
+        if kind == .interactive, active.definition.verifyBeforeBackground, account.isDefault {
             markVerified()
         }
         return usage
@@ -413,7 +414,8 @@ public final class Provider {
     }
 
     /// An added login is checked by being added; the default login once an
-    /// explicit refresh succeeds, remembered as `<id>.verifiedAtLeastOnce`.
+    /// explicit refresh succeeds, remembered as `<id>.verifiedAtLeastOnce` —
+    /// which only the default login marks or forgets.
     private func isVerified(_ account: Account) -> Bool {
         !account.isDefault || settings.isOn("verifiedAtLeastOnce", forProvider: definition.id) == true
     }

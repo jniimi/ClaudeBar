@@ -94,6 +94,9 @@
               "path": "${XDG_DATA_HOME:-~/.local/share}/opencode/auth.json",
               "token": "$.opencode.key"
             }
+          },
+          {
+            "setting": "apiKey"
           }
         ]
       },
@@ -143,17 +146,5 @@
         }
       }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "api": {
-        "credential": {
-          "firstOf": null,
-          "setting": "apiKey"
-        },
-        "fallbackOn": null
-      },
-      "local": null
-    }
-  }
+  ]
 }

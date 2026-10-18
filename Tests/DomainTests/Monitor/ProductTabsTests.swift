@@ -13,7 +13,7 @@ struct ProductTabsTests {
     /// Codex with two logins (*me* and *work*), then Claude with one.
     private func monitor() throws -> (QuotaMonitor, codex: Provider, claude: Provider) {
         let settings = JSONSettingsRepository(store: JSONSettingsStore(fileURL: temp.appendingPathComponent("settings.json")))
-        let work = ProviderAccountConfig(accountId: "work", label: "work", probeConfig: ["codexHome": "/tmp/work", "chatgptAccountId": "work"])
+        let work = ProviderAccountConfig(accountId: "work", label: "work", probeConfig: ["folder": "/tmp/work", "accountId": "work"])
         let codex = try ProviderFactory.make("codex", settings: settings, accounts: [work])
         let claude = try ProviderFactory.make("claude", settings: settings)
         return (QuotaMonitor(providers: kept([codex, claude])), codex, claude)

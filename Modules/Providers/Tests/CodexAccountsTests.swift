@@ -189,7 +189,7 @@ struct CodexAccountsTests {
         await #expect(throws: UsageError.self) { try await product.refresh(account) }
 
         #expect(stub.launches.count == 0)
-        #expect(account.lastError?.localizedDescription.contains("original account") == true)
+        #expect(account.lastError?.localizedDescription.contains("signed in to someone else") == true)
     }
 
     // MARK: - Adding an account by its folder
@@ -208,8 +208,8 @@ struct CodexAccountsTests {
         #expect(first.email == "a@example.com")
         #expect(second.email == "b@example.com")
         #expect(first.accountId != second.accountId)
-        #expect(first.values["chatgptAccountId"] == "account-a")
-        #expect(first.values["codexHome"] == a.resolvingSymlinksInPath().path)
+        #expect(first.values["accountId"] == "account-a")
+        #expect(first.values["folder"] == a.resolvingSymlinksInPath().path)
         #expect(first.madeBy == .folder)
     }
 
@@ -238,7 +238,7 @@ struct CodexAccountsTests {
         let first = try codex.accounts.add(signedInAt: a)
         let second = try codex.accounts.add(signedInAt: b)
 
-        #expect(first.values["chatgptAccountId"] != second.values["chatgptAccountId"])
+        #expect(first.values["accountId"] != second.values["accountId"])
     }
 
     @Test
@@ -291,7 +291,7 @@ struct CodexAccountsTests {
     // MARK: - One provider, many logins
 
     @Test
-    func `should read added logins over RPC and the API only, from their own folder and account`() throws {
+    func `should read an added login from its own folder and account, the terminal included`() throws {
         let stub = try StubbedProvider(providerId: "codex")
         defer { stub.cleanUp() }
         let folder = try writeLogin(in: stub.home, "work", email: "work@example.com", accountId: "work")
@@ -301,9 +301,9 @@ struct CodexAccountsTests {
         let addedSources = codex.dataSources(for: codex.accounts[1])
 
         #expect(defaultKinds == ["rpc", "api", "tty"])
-        #expect(addedSources.map(\.kind) == ["rpc", "api"])
-        #expect(addedSources.first?.definition.fallback == nil)
-        #expect(addedSources.first?.definition.requiresFiles == ["\(folder.path)/auth.json"])
+        #expect(addedSources.map(\.kind) == ["rpc", "api", "tty"])
+        #expect(addedSources.first?.definition.fallback?.to == "tty")
+        #expect(addedSources.first?.definition.requiresFiles.contains("\(folder.path)/auth.json") == true)
         #expect(addedSources.first?.definition.identity?.equals == "work")
     }
 
@@ -326,7 +326,7 @@ struct CodexAccountsTests {
         defer { stub.cleanUp() }
         let codex = try stub.makeProvider("codex")
 
-        let added = codex.accounts.add(ProviderAccountConfig(accountId: "a", label: "", probeConfig: ["codexHome": "/tmp/x"]))
+        let added = codex.accounts.add(ProviderAccountConfig(accountId: "a", label: "", probeConfig: ["folder": "/tmp/x"]))
 
         #expect(added == nil)
         #expect(codex.accounts.count == 1)
@@ -381,7 +381,7 @@ struct CodexAccountsTests {
     private func config(_ id: String, folder: URL, accountId: String, email: String? = nil) -> ProviderAccountConfig {
         ProviderAccountConfig(
             accountId: id, label: "", email: email,
-            probeConfig: ["codexHome": folder.path, "chatgptAccountId": accountId]
+            probeConfig: ["folder": folder.path, "accountId": accountId]
         )
     }
 

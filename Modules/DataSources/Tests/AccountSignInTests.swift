@@ -11,8 +11,8 @@ struct AccountSignInTests {
     private let folder = URL(fileURLWithPath: "/accounts/codex/new-login")
 
     private let call = SignInCall(
-        cli: "codex", args: ["login"], homeVariable: "CODEX_HOME",
-        unset: ["OPENAI_API_KEY"]
+        cli: "codex", args: ["login"],
+        environment: ProcessEnvironment(unset: ["OPENAI_API_KEY"], set: ["CODEX_HOME": "/accounts/codex/new-login"])
     )
 
     /// What the login was started with.
@@ -106,16 +106,6 @@ struct AccountSignInTests {
             try await signIn(MockSignInProcess(), folders: folders).signIn(call, into: folder)
         }
         #expect(folders.all == [folder.path])
-    }
-
-    @Test
-    func `should unset nothing and wait five minutes when the definition gives only the command`() throws {
-        let json = #"{ "cli": "claude", "args": ["auth", "login"], "homeVariable": "CLAUDE_CONFIG_DIR" }"#
-
-        let decoded = try JSONDecoder().decode(SignInCall.self, from: Data(json.utf8))
-
-        #expect(decoded.unset.isEmpty)
-        #expect(decoded.timeout == 300)
     }
 }
 

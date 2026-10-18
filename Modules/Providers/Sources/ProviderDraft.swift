@@ -196,22 +196,19 @@ public struct ProviderDraft: Sendable, Equatable {
     }
 
     /// A key that is the person's own takes a second account by a second
-    /// key, typed into *Add Account* and kept under that account. A key read
-    /// from an environment variable is the default login's alone.
+    /// key, typed into *Add Account* and kept under that account.
     private func accounts() throws -> ProviderDefinition.Accounts? {
-        guard let credential = try credential() else { return nil }
-        var patch: [String: JSONValue] = [:]
-        if credential != .setting("apiKey") {
-            patch[kind] = try JSONDecoder().decode(JSONValue.self, from: Data(#"{ "credential": { "environment": null, "setting": "apiKey" } }"#.utf8))
-        }
-        return .init(form: [Setting(id: "apiKey", label: "API key", kind: .secret, scope: .account)], patch: patch)
+        guard try credential() != nil else { return nil }
+        return .init(form: [Setting(id: "apiKey", label: "API key", kind: .secret, scope: .account)])
     }
 
+    /// A key read from an environment variable is this Mac's — the default
+    /// account's alone; an added account uses the key typed for it.
     private func credential() throws -> CredentialLookup? {
         guard case .api = start, let key else { return nil }
         switch key {
         case .apiKey: return .setting("apiKey")
-        case .environment(let variable): return .environment(variable)
+        case .environment(let variable): return .firstOf([.environment(variable), .setting("apiKey")])
         }
     }
 

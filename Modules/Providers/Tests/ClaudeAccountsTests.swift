@@ -18,7 +18,7 @@ struct ClaudeAccountsTests {
     private func config(_ id: String, folder: URL, email: String) -> ProviderAccountConfig {
         ProviderAccountConfig(
             accountId: id, label: "", email: email,
-            probeConfig: ["configDirectory": folder.path, "loginEmail": email, "credentialService": "fixture-\(id)"]
+            probeConfig: ["folder": folder.path, "accountId": email]
         )
     }
 
@@ -68,14 +68,14 @@ struct ClaudeAccountsTests {
         await #expect(throws: UsageError.self) { try await provider.refresh(added) }
 
         #expect(added.snapshot == nil)
-        #expect(added.lastError?.localizedDescription.contains("Reconnect the original Claude account") == true)
+        #expect(added.lastError?.localizedDescription.contains("signed in to someone else") == true)
         #expect(me.snapshot?.sessionQuota?.percentRemaining == 80)
     }
 
     @Test
     func `should run the CLI for an added login in its own folder without the default login's keys`() throws {
         let sources = try ProviderFactory.builtIn("claude").dataSources(forAccount: [
-            "configDirectory": "/Users/me/claude-work", "loginEmail": "work@example.com", "credentialService": "svc",
+            "folder": "/Users/me/claude-work", "accountId": "work@example.com",
         ])
 
         for kind in ["cli", "cliCost"] {
@@ -84,8 +84,8 @@ struct ClaudeAccountsTests {
             #expect(call.environment.set["CLAUDE_CONFIG_DIR"] == "/Users/me/claude-work")
             #expect(call.environment.unset.contains("ANTHROPIC_API_KEY"))
             #expect(call.environment.unset.contains("CLAUDE_CODE_OAUTH_TOKEN"))
-            #expect(source.context["account"]?.path == "/Users/me/claude-work/.claude.json")
-            #expect(source.identity?.field == .context(file: "account", field: "email"))
+            #expect(source.context["signedInAs"]?.path == "/Users/me/claude-work/.claude.json")
+            #expect(source.identity?.field == .context(file: "signedInAs", field: "id"))
             #expect(source.identity?.equals == "work@example.com")
         }
     }
@@ -93,7 +93,7 @@ struct ClaudeAccountsTests {
     @Test
     func `should grant folder trust in the added login's own config`() throws {
         let sources = try ProviderFactory.builtIn("claude").dataSources(forAccount: [
-            "configDirectory": "/Users/me/claude-work", "loginEmail": "work@example.com", "credentialService": "svc",
+            "folder": "/Users/me/claude-work", "accountId": "work@example.com",
         ])
         let cli = try #require(sources.first { $0.kind == "cli" })
 
@@ -106,10 +106,10 @@ struct ClaudeAccountsTests {
     @Test
     func `should leave the default login as it was when accounts are added`() throws {
         let definition = try ProviderFactory.builtIn("claude")
-        let cli = try #require(definition.dataSource("cli"))
+        let cli = try #require(try definition.asDefaultAccount("cli"))
 
         #expect(cli.identity == nil)
-        #expect(cli.context["account"]?.path == "${CLAUDE_CONFIG_DIR:-~}/.claude.json")
+        #expect(cli.context["signedInAs"]?.path == ["${CLAUDE_CONFIG_DIR:-~/.claude}/.claude.json", "${CLAUDE_CONFIG_DIR:-~}/.claude.json"])
     }
 
     // MARK: - Guest passes are the default login's
@@ -132,7 +132,7 @@ struct ClaudeAccountsTests {
     // MARK: - Add Account: choosing a signed-in folder
 
     @Test
-    func `should save the folder, its email and its keychain service when the person chooses a signed-in folder`() throws {
+    func `should save the folder and who is signed in to it when the person chooses a signed-in folder`() throws {
         let claude = try ClaudeHarness()
         defer { claude.cleanUp() }
         let settings = InMemoryProviderSettings()
@@ -141,11 +141,8 @@ struct ClaudeAccountsTests {
 
         let added = try provider.accounts.add(signedInAt: work)
 
-        let folder = try #require(added.values["configDirectory"])
-        let hash = SHA256.hash(data: Data(folder.utf8)).map { String(format: "%02x", $0) }.joined()
         #expect(added.email == "work@example.com")
-        #expect(added.values["loginEmail"] == "work@example.com")
-        #expect(added.values["credentialService"] == "Claude Code-credentials-\(hash.prefix(8))")
+        #expect(added.values == ["folder": work.resolvingSymlinksInPath().path, "accountId": "work@example.com"])
         #expect(settings.accounts(forProvider: "claude").map(\.accountId) == [added.accountId])
     }
 

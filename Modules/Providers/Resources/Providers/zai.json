@@ -56,16 +56,5 @@
       },
       "mapping": { "script": { "file": "zai-usage.js" } }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "api": {
-        "credential": {
-          "firstOf": null,
-          "setting": "apiKey",
-          "with": { "baseURL": "https://{{setting.platform.host}}" }
-        }
-      }
-    }
-  }
+  ]
 }

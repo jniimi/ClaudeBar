@@ -49,7 +49,7 @@ struct SignInAccountsTests {
 
         let folder = try #require(added.folder)
         #expect(added.email == "work@example.com")
-        #expect(added.values["chatgptAccountId"] == "work")
+        #expect(added.values["accountId"] == "work")
         #expect(folder.madeBy == .signIn)
         #expect(folder.url.deletingLastPathComponent().lastPathComponent == "codex")
         #expect(stub.settings.accounts(forProvider: "codex").first?.madeBy == .signIn)
@@ -109,7 +109,7 @@ struct SignInAccountsTests {
         let settings = InMemoryProviderSettings()
         let codex = try ProviderFactory.make("codex", settings: settings)
         let work = ProviderAccountConfig(accountId: "a", label: "", email: "w@example.com",
-                                         probeConfig: ["codexHome": "/tmp/a", "chatgptAccountId": "a"])
+                                         probeConfig: ["folder": "/tmp/a", "accountId": "a"])
 
         codex.accounts.add(work)
 
@@ -196,16 +196,17 @@ struct SignInAccountsTests {
 
     @Test
     func `should sign Claude in with its own config folder and no inherited API key`() throws {
-        let signIn = try #require(try ProviderFactory.builtIn("claude").accounts?.signIn)
+        let call = try #require(try ProviderFactory.builtIn("claude").signInCall(into: "/accounts/claude/new"))
 
-        #expect(signIn.args == ["auth", "login", "--claudeai"])
-        #expect(signIn.homeVariable == "CLAUDE_CONFIG_DIR")
-        #expect(signIn.unset.contains("ANTHROPIC_API_KEY"))
+        #expect(call.cli == "claude")
+        #expect(call.args == ["auth", "login", "--claudeai"])
+        #expect(call.environment.set == ["CLAUDE_CONFIG_DIR": "/accounts/claude/new"])
+        #expect(call.environment.unset.contains("ANTHROPIC_API_KEY"))
     }
 
     @Test
     func `should refuse a provider whose browser sign-in has no way to check the folder`() {
-        let json = #"{ "signIn": { "cli": "x", "args": [], "homeVariable": "X_HOME" } }"#
+        let json = #"{ "signIn": { "args": ["login"] } }"#
 
         #expect(throws: DecodingError.self) {
             try JSONDecoder().decode(ProviderDefinition.Accounts.self, from: Data(json.utf8))

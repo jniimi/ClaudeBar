@@ -23,12 +23,17 @@
       "summary": "Reads usage with the Cursor app's own login",
       "requiresFiles": ["{{platform.appData}}/Cursor/User/globalStorage/state.vscdb"],
       "credential": {
-        "sqlite": {
-          "path": "{{platform.appData}}/Cursor/User/globalStorage/state.vscdb",
-          "query": "SELECT value AS token FROM ItemTable WHERE key = 'cursorAuth/accessToken'",
-          "fields": { "token": "$.token" },
-          "hint": "Sign in again in Cursor settings, then refresh."
-        }
+        "firstOf": [
+          {
+            "sqlite": {
+              "path": "{{platform.appData}}/Cursor/User/globalStorage/state.vscdb",
+              "query": "SELECT value AS token FROM ItemTable WHERE key = 'cursorAuth/accessToken'",
+              "fields": { "token": "$.token" },
+              "hint": "Sign in again in Cursor settings, then refresh."
+            }
+          },
+          { "setting": "accessToken" }
+        ]
       },
       "fetch": {
         "http": {
@@ -47,13 +52,5 @@
         "http.403": "authenticationRequired"
       }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "api": {
-        "requiresFiles": [],
-        "credential": { "sqlite": null, "setting": "accessToken" }
-      }
-    }
-  }
+  ]
 }

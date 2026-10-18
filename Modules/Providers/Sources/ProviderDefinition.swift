@@ -1,7 +1,7 @@
 import DataSources
-import Quotas
-import Crypto
+import Diagnostics
 import Foundation
+import Quotas
 
 /// A provider as data — what ships in `Resources/Providers/<id>.json` for a
 /// built-in, and what *Add Provider* will write for a custom one. Validated
@@ -158,102 +158,65 @@ public struct ProviderDefinition: Sendable, Equatable, Codable {
         }
     }
 
-    /// Logins a person adds beside the default one (Codex, #326). An added
-    /// login runs the SAME data sources with `patch` merged in (RFC 7396) and
-    /// its saved values filling `{{account.<name>}}` — one definition, never
-    /// a copy per login.
+    /// How an account is signed in (#577): accounts a person adds beside the
+    /// default one, which is signed in on this Mac. Each runs the SAME
+    /// definition read for it — its values filling `{{account.<name>}}`, and
+    /// nothing of this Mac reached. A key or a folder given on the form is an
+    /// account-scope setting and needs nothing here; a folder ClaudeBar
+    /// checks, a sign-in, and how the vendor's CLI runs for an added account
+    /// are said once, here.
     public struct Accounts: Sendable, Equatable, Codable {
-        /// How a person adds one: by choosing the folder its login lives in.
+        /// The values an added folder account keeps: its folder and who is
+        /// signed in to it.
+        public static let folderValue = "folder"
+        public static let accountIdValue = "accountId"
+
+        /// *Choose Signed-in Folder*: where the vendor keeps a login, and who
+        /// is signed in to it.
         public let folder: Folder?
-        /// …or by running the vendor's login into a new folder, which
-        /// `folder` then checks — so a sign-in needs a folder rule.
-        public let signIn: SignInCall?
-        /// …or by filling in the account's own settings — an API key, a
-        /// region. Account scope; a secret is kept in the vault, under the
-        /// account. Written here or as `settings` with `"scope": "account"`.
+        /// *Sign in with browser*: the vendor's login run into a new folder,
+        /// which `folder` then checks — so a sign-in needs a folder rule.
+        public let signIn: SignIn?
+        /// How the vendor's CLI runs for an added account — every fetch,
+        /// renewal and sign-in, and the lines *In use* writes.
+        public let cli: CLISetup?
+        /// *Add Account*'s form — the definition's account-scope settings.
         public let form: [Setting]
-        /// By data source kind, what an added login changes — its own folder,
-        /// its identity check, no fallback to the shared terminal. `null`
-        /// leaves that data source out for added logins.
-        public let patch: [String: JSONValue]
 
-        /// `{ "savedAs": "codexHome", "default": "${CODEX_HOME:-~/.codex}",
-        /// "accountId": { "field": "account", "savedAs": "chatgptAccountId" } }`
-        /// — the folder and the login's account id are saved as the account's
-        /// values; `notSignedIn` is what a folder without a login says.
+        /// `{ "default": "${CODEX_HOME:-~/.codex}", "signedInAs": { "file":
+        /// "{{account.folder}}/auth.json", "id": "$.tokens.account_id" } }`
         public struct Folder: Sendable, Equatable, Codable {
-            public struct AccountId: Sendable, Equatable, Codable {
-                /// The field that identifies the login — a credential value,
-                /// or a field of a context file (`$context.account.email`).
-                public let field: IdentityField
-                public let savedAs: String
-
-                public init(field: IdentityField, savedAs: String) {
-                    self.field = field
-                    self.savedAs = savedAs
-                }
-            }
-
-            /// A value worked out from the chosen folder rather than read from
-            /// it: `prefix` + the first `sha256` hex digits of the folder's
-            /// path — how Claude Code names a config folder's Keychain item.
-            public struct Derived: Sendable, Equatable, Codable {
-                public let prefix: String
-                public let sha256: Int
-
-                public init(prefix: String, sha256: Int) {
-                    self.prefix = prefix
-                    self.sha256 = sha256
-                }
-            }
-
-            public let savedAs: String
-            /// The default login's folder — never added a second time.
+            /// Where the vendor keeps the default account's login — fills
+            /// `{{account.folder}}` for it, and is never added a second time.
             public let `default`: String?
-            public let accountId: AccountId
-            /// Where the login's email is read. A credential's `email` unless
-            /// the definition says otherwise.
-            public let email: IdentityField
-            /// Values saved beside the folder, by name, for `{{account.<name>}}`.
-            public let derived: [String: Derived]
+            /// *Signed in as …* — who is signed in, read for every data source.
+            public let signedInAs: SignedInAs
+            /// What a folder holding no login says; the fix is the vendor's.
             public let notSignedIn: String?
 
-            public init(
-                savedAs: String,
-                default folder: String? = nil,
-                accountId: AccountId,
-                email: IdentityField = .credential("email"),
-                derived: [String: Derived] = [:],
-                notSignedIn: String? = nil
-            ) {
-                self.savedAs = savedAs
+            public init(default folder: String? = nil, signedInAs: SignedInAs, notSignedIn: String? = nil) {
                 self.default = folder
-                self.accountId = accountId
-                self.email = email
-                self.derived = derived
+                self.signedInAs = signedInAs
                 self.notSignedIn = notSignedIn
+            }
+        }
+
+        /// `{ "args": ["login"] }` — the vendor's login command; its program
+        /// is the definition's `cli`, its environment `accounts.cli`.
+        public struct SignIn: Sendable, Equatable, Codable {
+            public let args: [String]
+            /// Seconds to wait for the person to finish in the browser.
+            public let timeout: TimeInterval
+
+            public init(args: [String], timeout: TimeInterval = 300) {
+                self.args = args
+                self.timeout = timeout
             }
 
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
-                savedAs = try container.decode(String.self, forKey: .savedAs)
-                self.default = try container.decodeIfPresent(String.self, forKey: .default)
-                accountId = try container.decode(AccountId.self, forKey: .accountId)
-                email = try container.decodeIfPresent(IdentityField.self, forKey: .email) ?? .credential("email")
-                derived = try container.decodeIfPresent([String: Derived].self, forKey: .derived) ?? [:]
-                notSignedIn = try container.decodeIfPresent(String.self, forKey: .notSignedIn)
-            }
-
-            /// The account's values for a chosen folder: the folder, and what
-            /// is derived from it.
-            public func values(for folder: String) -> [String: String] {
-                var values = [savedAs: folder]
-                guard !derived.isEmpty else { return values }
-                let hash = SHA256.hash(data: Data(folder.utf8)).map { String(format: "%02x", $0) }.joined()
-                for (name, rule) in derived {
-                    values[name] = rule.prefix + hash.prefix(max(0, rule.sha256))
-                }
-                return values
+                args = try container.decode([String].self, forKey: .args)
+                timeout = try container.decodeIfPresent(TimeInterval.self, forKey: .timeout) ?? 300
             }
         }
 
@@ -262,26 +225,29 @@ public struct ProviderDefinition: Sendable, Equatable, Codable {
             [signIn.map { _ in .signIn }, folder.map { _ in .folder }, form.isEmpty ? nil : .form].compactMap { $0 }
         }
 
-        public init(folder: Folder? = nil, signIn: SignInCall? = nil, form: [Setting] = [], patch: [String: JSONValue] = [:]) {
-            self.signIn = signIn
-            self.form = form
+        public init(folder: Folder? = nil, signIn: SignIn? = nil, cli: CLISetup? = nil, form: [Setting] = []) {
             self.folder = folder
-            self.patch = patch
+            self.signIn = signIn
+            self.cli = cli
+            self.form = form
         }
 
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             folder = try container.decodeIfPresent(Folder.self, forKey: .folder)
-            signIn = try container.decodeIfPresent(SignInCall.self, forKey: .signIn)
+            signIn = try container.decodeIfPresent(SignIn.self, forKey: .signIn)
+            cli = try container.decodeIfPresent(CLISetup.self, forKey: .cli)
             form = try (container.decodeIfPresent([Setting].self, forKey: .form) ?? []).map(\.inAccountScope)
             if signIn != nil, folder == nil {
                 throw DecodingError.dataCorruptedError(forKey: .signIn, in: container,
                     debugDescription: "accounts.signIn needs accounts.folder to check the folder it signs into")
             }
-            patch = try container.decodeIfPresent([String: JSONValue].self, forKey: .patch) ?? [:]
+            if container.contains(.patch) {
+                AppLog.providers.warning("accounts.patch is no longer read: an added account reaches only what names it (#577)")
+            }
         }
 
-        private enum CodingKeys: String, CodingKey { case folder, signIn, form, patch }
+        private enum CodingKeys: String, CodingKey { case folder, signIn, cli, form, patch }
 
         /// The form is written once, as the definition's account-scope
         /// `settings`; `accounts.form` is only read, from files made before.
@@ -289,7 +255,7 @@ public struct ProviderDefinition: Sendable, Equatable, Codable {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(folder, forKey: .folder)
             try container.encodeIfPresent(signIn, forKey: .signIn)
-            try container.encode(patch, forKey: .patch)
+            try container.encodeIfPresent(cli, forKey: .cli)
         }
     }
 
@@ -325,7 +291,7 @@ public struct ProviderDefinition: Sendable, Equatable, Codable {
         self.settings = all
         let accountScope = all.filter { $0.scope == .account }
         if let accounts {
-            self.accounts = Accounts(folder: accounts.folder, signIn: accounts.signIn, form: accountScope, patch: accounts.patch)
+            self.accounts = Accounts(folder: accounts.folder, signIn: accounts.signIn, cli: accounts.cli, form: accountScope)
         } else {
             self.accounts = accountScope.isEmpty ? nil : Accounts(form: accountScope)
         }
@@ -401,37 +367,97 @@ public struct ProviderDefinition: Sendable, Equatable, Codable {
         return definition
     }
 
-    /// The data sources an added login runs: each one with `accounts.patch`
-    /// merged in and `{{account.<name>}}` filled from the login's `values`.
-    /// A source that needs a value only some sources ask for (`"for"`) is left
-    /// out of a login added without it — added for another source. Throws
+    /// The values the default account is read with. It is signed in as this
+    /// Mac is: its folder is where the vendor keeps the default login, and
+    /// every other value its setting's default.
+    public var defaultAccountValues: [String: String] {
+        var values: [String: String] = [:]
+        for setting in accountSettings where setting.kind != .secret {
+            if let value = setting.default, !value.isEmpty { values[setting.id] = value }
+        }
+        if let folder = accounts?.folder?.default {
+            values[Accounts.folderValue] = folder
+        }
+        return values
+    }
+
+    /// The data sources the default account runs — signed in on this Mac, so
+    /// every read is reached — filled with `values`.
+    public func dataSources(forDefaultAccount values: [String: String]) throws -> [DataSourceDefinition] {
+        try dataSources.map { try knowingWhoIsSignedIn($0).filled(values, scope: "account") }
+    }
+
+    /// The data sources an added account runs: what its own sign-in reaches
+    /// (#577). Its CLI runs as `accounts.cli` says; a read that names nothing
+    /// of the account is this Mac's and left out; a folder account must still
+    /// be who it was added as. A source that needs a value only some sources
+    /// ask for (`"for"`) is left out of an account added without it. Throws
     /// when a value every source asks for is missing.
     public func dataSources(forAccount values: [String: String]) throws -> [DataSourceDefinition] {
-        let patch = accounts?.patch ?? [:]
-        return try dataSources.compactMap { source -> DataSourceDefinition? in
-            var adapted = source
-            if let change = patch[source.kind] {
-                if case .null = change { return nil }
-                adapted = try source.patched(with: change)
+        // A checked folder holds a login only with who it was added as.
+        var signedInAs: String?
+        if accounts?.folder != nil, values[Accounts.folderValue] != nil {
+            guard let accountId = values[Accounts.accountIdValue] else {
+                throw DefinitionError.missingAccountValue(id, Accounts.accountIdValue)
             }
-            adapted = try adapted.filled(values, scope: "account")
-            if let missing = adapted.unfilled(scope: "account").first {
+            signedInAs = accountId
+        }
+        return try reads(for: values, signedInAs: signedInAs)
+    }
+
+    /// The data sources that say who is signed in to `folder` before it is
+    /// added — *Choose Signed-in Folder*: read as an added account, with no
+    /// one to check yet.
+    public func dataSources(findingWhoIsSignedInTo folder: String) throws -> [DataSourceDefinition] {
+        try reads(for: [Accounts.folderValue: folder], signedInAs: nil)
+    }
+
+    private func reads(for values: [String: String], signedInAs: String?) throws -> [DataSourceDefinition] {
+        try dataSources.compactMap { source -> DataSourceDefinition? in
+            var source = knowingWhoIsSignedIn(source)
+            if let cli, let setup = accounts?.cli { source = source.runningCLI(cli, with: setup) }
+            let named = source.unfilled(scope: "account")
+            guard var read = try source.forAccount(values) else { return nil }
+            // A folder the account was given, and the data source reads, must still be there.
+            read = read.requiring(folderValues.filter(named.contains).compactMap { values[$0] })
+            if let signedInAs { read = read.checkingSignedIn(is: signedInAs) }
+            if let missing = read.unfilled(scope: "account").first {
                 if accountSettings.contains(where: { $0.id == missing && !$0.dataSources.isEmpty }) { return nil }
                 throw DefinitionError.missingAccountValue(id, missing)
             }
-            return adapted
+            return read
         }
     }
 
-    /// The usage history an added login reads: `accounts.patch.usageHistory`
-    /// merged in and `{{account.<name>}}` filled from its values. `nil` when
-    /// the patch doesn't say where the login's own logs are — it would read
-    /// the default login's — or a value is missing.
+    /// The default account's usage history, filled with `values`.
+    public func usageHistory(forDefaultAccount values: [String: String]) -> UsageLog.Definition? {
+        try? usageHistory?.filled(values, scope: "account")
+    }
+
+    /// The usage history an added account reads: its own logs — `nil` when the
+    /// logs are this Mac's, or a value is missing.
     public func usageHistory(forAccount values: [String: String]) -> UsageLog.Definition? {
-        guard let usageHistory, let patch = accounts?.patch["usageHistory"], patch != .null,
-              let adapted = try? usageHistory.patched(with: patch).filled(values, scope: "account"),
-              adapted.unfilled(scope: "account").isEmpty else { return nil }
-        return adapted
+        guard let read = try? usageHistory?.forAccount(values), read.unfilled(scope: "account").isEmpty else { return nil }
+        return read
+    }
+
+    /// How the vendor's CLI signs in to `folder`: its login, under
+    /// `accounts.cli` with the folder as the account's.
+    public func signInCall(into folder: String) throws -> SignInCall? {
+        guard let cli, let signIn = accounts?.signIn else { return nil }
+        let setup = try (accounts?.cli ?? CLISetup()).filled([Accounts.folderValue: folder], scope: "account")
+        return SignInCall(cli: cli, args: setup.args + signIn.args, environment: setup.environment, timeout: signIn.timeout)
+    }
+
+    /// The account values that are folders: a checked folder, and every
+    /// folder given on the form.
+    private var folderValues: [String] {
+        accountSettings.filter { if case .path = $0.kind { true } else { false } }.map(\.id)
+            + (accounts?.folder == nil ? [] : [Accounts.folderValue])
+    }
+
+    private func knowingWhoIsSignedIn(_ source: DataSourceDefinition) -> DataSourceDefinition {
+        accounts?.folder.map { source.knowing($0.signedInAs) } ?? source
     }
 
     public func validate() throws {
@@ -455,46 +481,21 @@ public struct ProviderDefinition: Sendable, Equatable, Codable {
         dataSources.first { $0.kind == kind }
     }
 
-    private static func json(_ value: some Encodable) throws -> JSONValue {
-        try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(value))
-    }
-
     /// The same definition running `binary` instead of its CLI's name — the
     /// person's *CLI location* (#210). Only the executable changes: every
-    /// CLI and JSON-RPC data source and every credential refresh that runs
-    /// the CLI keeps its arguments, prompts and timing, and so does Add
-    /// Account's sign-in. The value reaches a
-    /// subprocess as argv[0], never a shell command line. An empty,
-    /// whitespace-only or unchanged name is a no-op.
+    /// CLI and JSON-RPC data source, every credential renewal that runs the
+    /// CLI, and Add Account's sign-in keep their arguments, prompts and
+    /// timing. The value reaches a subprocess as argv[0], never a shell
+    /// command line. An empty, whitespace-only or unchanged name is a no-op.
     public func runningCLI(_ binary: String) throws -> ProviderDefinition {
         let binary = binary.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let cli, !binary.isEmpty, binary != cli else { return self }
-        let sources = try dataSources.map { source -> DataSourceDefinition in
-            var patch: [String: JSONValue] = [:]
-            let fetch = source.fetch.runningCLI(cli, at: binary)
-            if fetch != source.fetch { patch["fetch"] = try Self.json(fetch) }
-            if let credential = source.credential {
-                let repointed = credential.runningCLI(cli, at: binary)
-                if repointed != credential { patch["credential"] = try Self.json(repointed) }
-            }
-            return patch.isEmpty ? source : try source.patched(with: .object(patch))
-        }
-        var accounts = accounts
-        if let signIn = accounts?.signIn, signIn.cli == cli {
-            accounts = Accounts(
-                folder: accounts?.folder,
-                signIn: SignInCall(cli: binary, args: signIn.args, homeVariable: signIn.homeVariable,
-                                   unset: signIn.unset, timeout: signIn.timeout),
-                form: accounts?.form ?? [],
-                patch: accounts?.patch ?? [:]
-            )
-        }
         return ProviderDefinition(
             profile: profile,
-            cli: cli,
+            cli: binary,
             cliPlaces: cliPlaces,
             enabledByDefault: enabledByDefault,
-            dataSources: sources,
+            dataSources: dataSources.map { $0.runningCLI(cli, at: binary) },
             defaultDataSource: defaultDataSource,
             together: together,
             accounts: accounts,

@@ -20,7 +20,7 @@ struct InUseTests {
 
         let inUse = try #require(codex.inUse)
         #expect(inUse.login === codex.defaultAccount)
-        #expect(inUse.command == TerminalCommand(name: "codex", variable: "CODEX_HOME"))
+        #expect(inUse.command == TerminalCommand(name: "codex", environment: ["CODEX_HOME": "{{account.folder}}"]))
     }
 
     @Test
@@ -229,7 +229,7 @@ enum InUseFixture {
         let auth: [String: Any] = ["tokens": ["access_token": "token-work", "refresh_token": "refresh-work", "account_id": "work"],
                                    "last_refresh": ISO8601DateFormatter().string(from: Date())]
         try JSONSerialization.data(withJSONObject: auth).write(to: folder.appendingPathComponent("auth.json"))
-        let config = ProviderAccountConfig(accountId: "work", label: "work", probeConfig: ["codexHome": folder.path, "chatgptAccountId": "work"])
+        let config = ProviderAccountConfig(accountId: "work", label: "work", probeConfig: ["folder": folder.path, "accountId": "work"])
         stub.settings.addAccount(config, forProvider: "codex")
         let codex = try stub.makeProvider("codex", accounts: stub.settings.accounts(forProvider: "codex"))
         return (stub, codex, codex.accounts[1])

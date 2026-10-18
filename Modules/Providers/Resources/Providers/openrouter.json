@@ -35,8 +35,5 @@
       },
       "mapping": { "script": { "file": "openrouter-credits.js" } }
     }
-  ],
-  "accounts": {
-    "patch": { "api": { "credential": { "firstOf": null, "setting": "apiKey" } } }
-  }
+  ]
 }

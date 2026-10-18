@@ -15,10 +15,10 @@ struct ShellSetupTests {
         home = FileManager.default.temporaryDirectory.appendingPathComponent("shell-setup-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         setup = ShellSetup(commands: [
-            TerminalCommand(name: "claude", variable: "CLAUDE_CONFIG_DIR"),
-            TerminalCommand(name: "codex", variable: "CODEX_HOME"),
+            TerminalCommand(name: "claude", environment: ["CLAUDE_CONFIG_DIR": "{{account.folder}}"]),
+            TerminalCommand(name: "codex", environment: ["CODEX_HOME": "{{account.folder}}"]),
             // A second product on the same CLI: wrapped once all the same.
-            TerminalCommand(name: "claude", variable: "CLAUDE_CONFIG_DIR"),
+            TerminalCommand(name: "claude", environment: ["CLAUDE_CONFIG_DIR": "{{account.folder}}"]),
         ], home: home)
     }
 

@@ -11,7 +11,7 @@ import Testing
 @Suite
 struct AccountNamesTests {
     private func login(_ id: String, email: String?, label: String = "") -> ProviderAccountConfig {
-        ProviderAccountConfig(accountId: id, label: label, email: email, probeConfig: ["codexHome": "/tmp/\(id)", "chatgptAccountId": id])
+        ProviderAccountConfig(accountId: id, label: label, email: email, probeConfig: ["folder": "/tmp/\(id)", "accountId": id])
     }
 
     private func codex(_ settings: InMemoryProviderSettings, _ logins: [ProviderAccountConfig] = []) throws -> Provider {

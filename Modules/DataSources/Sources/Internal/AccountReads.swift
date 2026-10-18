@@ -40,6 +40,16 @@ extension JSONFileCredential {
     }
 }
 
+extension Recovery {
+    /// The recovery, on the account's own file only.
+    func accountReads() -> Recovery? {
+        switch self {
+        case .patchJSONFile(let path, let keys, let value):
+            path.accountReads().map { .patchJSONFile(path: $0, keys: keys, value: value) }
+        }
+    }
+}
+
 extension PathPattern {
     /// The places that use an account value — a list keeps its own entries.
     func accountReads() -> PathPattern? {
@@ -81,17 +91,13 @@ extension DataSourceDefinition {
             credential = own
         }
         guard let fetch = fetch.accountReads() else { return nil }
-        return DataSourceDefinition(
-            kind: kind, label: label, summary: summary, note: note, hidden: hidden,
-            credential: credential, fetch: fetch, mapping: mapping,
-            fallback: fallback, fallbackOn: fallbackOn, cache: cache,
-            context: context.compactMapValues { $0.accountReads() },
-            recover: recover.filter { AccountValues.used(by: $0.value) },
-            requiresFiles: requiresFiles.filter(AccountValues.used(by:)),
-            identity: identity,
-            verifyBeforeBackground: verifyBeforeBackground, unverifiedMessage: unverifiedMessage,
-            errors: errors
-        )
+        return changing { parts in
+            parts.credential = credential
+            parts.fetch = fetch
+            parts.context = parts.context.compactMapValues { $0.accountReads() }
+            parts.recover = parts.recover.compactMapValues { $0.accountReads() }
+            parts.requiresFiles = parts.requiresFiles.filter(AccountValues.used(by:))
+        }
     }
 }
 
@@ -103,7 +109,9 @@ extension UsageLog.Definition {
         let apps = otherApps?.filter { AccountValues.used(by: $0.records) }
         return UsageLog.Definition(
             records: records, prices: prices,
-            freeWhen: freeWhen.flatMap { AccountValues.used(by: $0) ? $0 : nil },
+            freeWhen: freeWhen?.localEndpoint.flatMap { rule in
+                rule.file.accountReads().map { UsageLog.FreeWhen(localEndpoint: UsageLog.LocalEndpointRule(file: $0, url: rule.url)) }
+            },
             sessionGap: sessionGap,
             otherApps: apps?.isEmpty == false ? apps : nil
         )

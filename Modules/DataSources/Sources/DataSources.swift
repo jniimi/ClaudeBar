@@ -189,7 +189,7 @@ public enum DataSources {
             recoveries: definition.recover.mapValues { recovery -> any Recovering in
                 switch recovery {
                 case .patchJSONFile(let path, let keys, let value):
-                    JSONFilePatch(path: path, keys: keys, value: value, homeDirectory: homeDirectory, environment: pathsEnvironment,
+                    JSONFilePatch(path: Paths.resolve(path, homeDirectory: homeDirectory, environment: pathsEnvironment), keys: keys, value: value, homeDirectory: homeDirectory, environment: pathsEnvironment,
                                   directory: { cliWorkingDirectory(platform: platform, homeDirectory: homeDirectory, environment: environment) })
                 }
             },

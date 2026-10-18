@@ -152,6 +152,6 @@ struct GeminiDefinitionTests {
         }
         #expect(file.path == "/Users/me/gemini-work/.gemini/oauth_creds.json")
         #expect(call.environment.set["GEMINI_CLI_HOME"] == "/Users/me/gemini-work")
-        #expect(source.requiresFiles == ["/Users/me/gemini-work/.gemini/oauth_creds.json"])
+        #expect(source.requiresFiles == ["/Users/me/gemini-work"])
     }
 }

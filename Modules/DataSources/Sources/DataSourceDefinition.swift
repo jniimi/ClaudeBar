@@ -117,6 +117,33 @@ public struct DataSourceDefinition: Sendable, Equatable, Codable {
         self.errors = errors
     }
 
+    /// What an account or a CLI location changes in a data source: where its
+    /// key is, how it fetches, what it reads beside, and who it must be.
+    struct Parts {
+        var credential: CredentialLookup?
+        var fetch: Fetch
+        var context: [String: JSONFileCredential]
+        var recover: [String: Recovery]
+        var requiresFiles: [String]
+        var identity: Identity?
+    }
+
+    /// The same data source with those parts changed; everything else kept.
+    func changing(_ change: (inout Parts) -> Void) -> DataSourceDefinition {
+        var parts = Parts(credential: credential, fetch: fetch, context: context, recover: recover,
+                          requiresFiles: requiresFiles, identity: identity)
+        change(&parts)
+        return DataSourceDefinition(
+            kind: kind, label: label, summary: summary, note: note, hidden: hidden,
+            credential: parts.credential, fetch: parts.fetch, mapping: mapping,
+            fallback: fallback, fallbackOn: fallbackOn, cache: cache,
+            context: parts.context, recover: parts.recover, requiresFiles: parts.requiresFiles,
+            identity: parts.identity,
+            verifyBeforeBackground: verifyBeforeBackground, unverifiedMessage: unverifiedMessage,
+            errors: errors
+        )
+    }
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(kind, forKey: .kind)
@@ -257,8 +284,9 @@ public struct Cache: Sendable, Equatable, Codable {
 /// A fix tried once when the mapping reports a failure.
 public enum Recovery: Sendable, Equatable, Codable {
     /// Sets one value deep inside a JSON file that already exists — e.g. a
-    /// CLI's "trusted folder" flag. `keys` may hold `{{cliDirectory}}`.
-    case patchJSONFile(path: String, keys: [String], value: JSONValue)
+    /// CLI's "trusted folder" flag. `keys` may hold `{{cliDirectory}}`;
+    /// `path` may be a list, as a context file's is.
+    case patchJSONFile(path: PathPattern, keys: [String], value: JSONValue)
 
     private enum Keys: String, CodingKey { case patchJSONFile }
     private enum PatchKeys: String, CodingKey { case path, keys, value }
@@ -267,7 +295,7 @@ public enum Recovery: Sendable, Equatable, Codable {
         let container = try decoder.container(keyedBy: Keys.self)
         let patch = try container.nestedContainer(keyedBy: PatchKeys.self, forKey: .patchJSONFile)
         self = .patchJSONFile(
-            path: try patch.decode(String.self, forKey: .path),
+            path: try patch.decode(PathPattern.self, forKey: .path),
             keys: try patch.decode([String].self, forKey: .keys),
             value: try patch.decode(JSONValue.self, forKey: .value)
         )

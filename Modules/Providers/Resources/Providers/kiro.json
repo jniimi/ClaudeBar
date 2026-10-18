@@ -28,23 +28,16 @@
     }
   ],
   "accounts": {
-    "patch": {
-      "cli": {
-        "fetch": {
-          "command": {
-            "environment": {
-              "unset": ["KIRO_API_KEY"],
-              "set": {
-                "HOME": "{{account.home}}",
-                "KIRO_HOME": "{{account.home}}/.kiro",
-                "XDG_CONFIG_HOME": "{{account.home}}/.config",
-                "XDG_DATA_HOME": "{{account.home}}/.local/share",
-                "XDG_CACHE_HOME": "{{account.home}}/.cache"
-              }
-            }
-          }
+    "cli": {
+      "environment": {
+        "set": {
+          "HOME": "{{account.home}}",
+          "KIRO_HOME": "{{account.home}}/.kiro",
+          "XDG_CONFIG_HOME": "{{account.home}}/.config",
+          "XDG_DATA_HOME": "{{account.home}}/.local/share",
+          "XDG_CACHE_HOME": "{{account.home}}/.cache"
         },
-        "requiresFiles": ["{{account.home}}"]
+        "unset": ["KIRO_API_KEY"]
       }
     }
   }

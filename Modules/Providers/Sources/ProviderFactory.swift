@@ -89,8 +89,10 @@ public enum ProviderFactory {
                                  environment: environment, loginShell: loginShell, cloudWatch: cloudWatch, priceCatalog: priceCatalog)
             },
             guestPasses: guestPasses,
-            // The definition says how to read each login's logs.
-            usageHistory: usageHistory ?? definition.usageHistory.map { history($0, login: definition.id, environment: environment) },
+            // The definition says how to read each login's logs; the default
+            // login reads them where the vendor keeps them on this Mac.
+            usageHistory: usageHistory ?? definition.usageHistory(forDefaultAccount: definition.defaultAccountValues)
+                .map { history($0, login: definition.id, environment: environment) },
             makeUsageHistory: { history($0, login: $1, environment: environment) },
             loginsInUse: loginsInUse,
             vault: secrets

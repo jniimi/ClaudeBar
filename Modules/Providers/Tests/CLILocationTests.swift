@@ -23,7 +23,7 @@ struct CLILocationTests {
 
     private func login(_ id: String) -> ProviderAccountConfig {
         ProviderAccountConfig(accountId: id, label: "", email: "\(id)@example.com",
-                              probeConfig: ["codexHome": "/tmp/\(id)", "chatgptAccountId": id])
+                              probeConfig: ["folder": "/tmp/\(id)", "accountId": id])
     }
 
     nonisolated private static let app = "/Applications/Codex.app/Contents/Resources/codex"

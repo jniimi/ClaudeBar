@@ -60,8 +60,5 @@
         "http.403": { "sessionExpired": "Run `cmd login` or set COMMAND_CODE_API_KEY." }
       }
     }
-  ],
-  "accounts": {
-    "patch": { "api": { "credential": { "firstOf": null, "setting": "apiKey" } } }
-  }
+  ]
 }

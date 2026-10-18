@@ -14,7 +14,10 @@ public enum IdentityField: Sendable, Equatable, Hashable, Codable {
     private static let contextPrefix = "$context."
 
     public init(path: String) throws {
-        if path.hasPrefix(Self.contextPrefix) {
+        let signedInAs = "$\(SignedInAs.name)."
+        if path.hasPrefix(signedInAs), path.count > signedInAs.count {
+            self = .context(file: SignedInAs.name, field: String(path.dropFirst(signedInAs.count)))
+        } else if path.hasPrefix(Self.contextPrefix) {
             let parts = path.dropFirst(Self.contextPrefix.count).split(separator: ".", omittingEmptySubsequences: false)
             guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\(path): expected $context.<file>.<field>"))
@@ -32,6 +35,7 @@ public enum IdentityField: Sendable, Equatable, Hashable, Codable {
     public var path: String {
         switch self {
         case .credential(let name): name
+        case .context(SignedInAs.name, let field): "$\(SignedInAs.name).\(field)"
         case .context(let file, let field): "\(Self.contextPrefix)\(file).\(field)"
         }
     }

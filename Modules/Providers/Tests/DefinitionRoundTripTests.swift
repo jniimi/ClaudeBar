@@ -3,8 +3,8 @@ import Foundation
 import Providers
 import Testing
 
-/// An added login runs a built-in data source re-read through JSON — patched
-/// and filled. Anything lost on the way would silently change what it fetches.
+/// An account runs a built-in data source re-read through JSON — filled with
+/// its values. Anything lost on the way would silently change what it fetches.
 @Suite
 struct DefinitionRoundTripTests {
     @Test(arguments: ["claude", "codex", "deepseek", "minimax", "vercel-gateway", "commandcode", "ampcode", "kiro", "cursor", "grok", "opencode-go", "zai", "kimi", "copilot", "alibaba", "gemini", "antigravity", "bedrock", "omp", "mistral"])
@@ -18,11 +18,11 @@ struct DefinitionRoundTripTests {
     }
 
     @Test
-    func `should leave a data source unchanged when an added login patches nothing and fills no values`() throws {
+    func `should leave a data source unchanged when it is filled with no values`() throws {
         let codex = try ProviderFactory.builtIn("codex")
 
         for source in codex.dataSources {
-            #expect(try source.patched(with: .object([:])).filled([:], scope: "account") == source)
+            #expect(try source.filled([:], scope: "account") == source)
         }
     }
 }

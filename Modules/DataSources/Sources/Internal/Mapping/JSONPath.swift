@@ -47,6 +47,9 @@ struct JSONScope {
         if path.hasPrefix("$credential.") {
             return credential[String(path.dropFirst("$credential.".count))]
         }
+        if path.hasPrefix("$\(SignedInAs.name).") {
+            return context[SignedInAs.name]?[String(path.dropFirst(SignedInAs.name.count + 2))]
+        }
         if path.hasPrefix("$context.") {
             let parts = path.dropFirst("$context.".count).split(separator: ".", maxSplits: 1).map(String.init)
             return parts.count == 2 ? context[parts[0]]?[parts[1]] : nil

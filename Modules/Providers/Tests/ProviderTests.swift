@@ -20,19 +20,17 @@ struct ProviderTests {
         try! JSONDecoder().decode(DataSourceDefinition.self, from: Data(json.utf8))
     }
 
-    /// An added login asks with its own `login` value.
-    private static let loginPatch = try! JSONDecoder().decode([String: JSONValue].self, from: Data("""
-    { "api": { "fetch": { "http": { "url": "https://api.acme.test/usage?login={{account.login}}" } } },
-      "backup": { "fetch": { "http": { "url": "https://backup.acme.test/usage?login={{account.login}}" } } } }
-    """.utf8))
-
-    private static func acme(verifyBeforeBackground: Bool = false, sameLogin: Bool = false, patch: [String: JSONValue] = loginPatch) -> ProviderDefinition {
+    /// Each login asks with its own `login` value; the default login's is
+    /// `me`. `thisMacOnly`: the API's key is an environment variable, so only
+    /// the default login reaches it.
+    private static func acme(verifyBeforeBackground: Bool = false, sameLogin: Bool = false, thisMacOnly: Bool = false) -> ProviderDefinition {
         ProviderDefinition(
             profile: ProviderProfile(id: "acme", name: "Acme"),
             dataSources: [
                 source("""
                 { "kind": "api", "label": "API",
-                  "fetch": { "http": { "url": "https://api.acme.test/usage" } },
+                  \(thisMacOnly ? #""credential": { "environment": "ACME_KEY" },"# : "")
+                  "fetch": { "http": { "url": "https://api.acme.test/usage?login={{account.login}}" } },
                   "mapping": { "json": { "quotas": [ { "kind": "session", "at": "$", "usedPercent": "used" } ] } },
                   "cache": { "ttl": 600 },
                   "verifyBeforeBackground": \(verifyBeforeBackground),
@@ -40,12 +38,12 @@ struct ProviderTests {
                 """),
                 source("""
                 { "kind": "backup", "label": "Backup",
-                  "fetch": { "http": { "url": "https://backup.acme.test/usage" } },
+                  "fetch": { "http": { "url": "https://backup.acme.test/usage?login={{account.login}}" } },
                   "mapping": { "json": { "quotas": [ { "kind": "session", "at": "$", "usedPercent": "used" } ] } } }
                 """),
             ],
             defaultDataSource: "api",
-            accounts: .init(patch: patch)
+            settings: [Setting(id: "login", label: "Login", scope: .account, default: "me")]
         )
     }
 
@@ -327,9 +325,7 @@ struct ProviderTests {
     func `should use the next data source on the fallback chain when a login cannot use the chosen one`() async throws {
         let network = AcmeNetwork()
         network.answer(Self.backup, used: 25)
-        var patch = Self.loginPatch
-        patch["api"] = try JSONDecoder().decode(JSONValue.self, from: Data("null".utf8))
-        let acme = acme(network, definition: Self.acme(patch: patch), logins: ["work"])
+        let acme = acme(network, definition: Self.acme(thisMacOnly: true), logins: ["work"])
 
         let usage = try await acme.refresh(acme.accounts[1])
 

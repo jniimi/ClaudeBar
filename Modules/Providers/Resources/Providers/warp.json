@@ -47,8 +47,5 @@
         "http.403": { "sessionExpired": "Create a new API key in Warp: Settings → Platform → API Keys." }
       }
     }
-  ],
-  "accounts": {
-    "patch": { "api": { "credential": { "firstOf": null, "setting": "apiKey" } } }
-  }
+  ]
 }

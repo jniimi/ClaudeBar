@@ -16,7 +16,7 @@ struct HiddenQuotasAccountsTests {
             fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("hidden-\(UUID().uuidString).json")))
         settings.setHiddenQuotaKeys(["model:codex-spark"], forProvider: "codex")
         let codex = try ProviderFactory.make("codex", settings: settings, accounts: [
-            ProviderAccountConfig(accountId: "work", label: "", probeConfig: ["codexHome": "/tmp/w", "chatgptAccountId": "w"]),
+            ProviderAccountConfig(accountId: "work", label: "", probeConfig: ["folder": "/tmp/w", "accountId": "w"]),
         ])
         let monitor = QuotaMonitor(providers: Providers([codex], make: { _ in fatalError("no providers added") }), clock: SystemClock(), settingsRepository: settings)
 

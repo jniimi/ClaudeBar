@@ -181,10 +181,10 @@ public final class Accounts {
     /// that ends up holding no new login is deleted.
     @discardableResult
     public func signIn(with runner: AccountSignIn = AccountSignIn(), under root: URL = SignedInFolder.signInRoot) async throws -> Account {
-        guard let call = configuration.running.accounts?.signIn else {
+        let folder = SignedInFolder.forSignIn(to: id, under: root)
+        guard let call = try configuration.running.signInCall(into: folder.url.path) else {
             throw UsageError.executionFailed("\(name) has no sign-in.")
         }
-        let folder = SignedInFolder.forSignIn(to: id, under: root)
         try await runner.signIn(call, into: folder.url)
         do {
             return try add(folder)
@@ -199,7 +199,7 @@ public final class Accounts {
     /// identity rule decides whether the same person came back. A folder the
     /// person chose is theirs to sign in to; ClaudeBar never runs a login there.
     public func signInAgain(_ account: Account, with runner: AccountSignIn = AccountSignIn()) async throws {
-        guard let call = configuration.running.accounts?.signIn, let folder = account.folder, folder.goesWithAccount else {
+        guard let folder = account.folder, folder.goesWithAccount, let call = try configuration.running.signInCall(into: folder.url.path) else {
             throw UsageError.executionFailed("Sign in again in this folder yourself, then refresh.")
         }
         try await runner.signInAgain(call, in: folder.url)
@@ -255,8 +255,9 @@ public final class Accounts {
             return nil
         }
         var values = config.probeConfig
-        if let field = definition.accounts?.folder?.savedAs, let value = values[field], !value.isEmpty {
-            values[field] = configuration.paths.canonical(value)
+        let folder = ProviderDefinition.Accounts.folderValue
+        if definition.accounts?.folder != nil, let value = values[folder], !value.isEmpty {
+            values[folder] = configuration.paths.canonical(value)
         }
         for setting in definition.accountSettings {
             if case .path = setting.kind, let value = values[setting.id], !value.isEmpty {
@@ -293,20 +294,19 @@ public final class Accounts {
         guard home != defaultHome else {
             throw UsageError.executionFailed("This is the default \(name) login, which is already listed.")
         }
-        let values = rule.values(for: home)
-        guard let login = signedIn(with: values.merging([rule.accountId.savedAs: ""]) { _, empty in empty }, rule: rule),
-              let accountId = login.accountId, let email = login.email else {
+        let values = [ProviderDefinition.Accounts.folderValue: home]
+        guard let login = signedIn(to: home, rule: rule), let accountId = login.accountId, let email = login.email else {
             throw UsageError.executionFailed(rule.notSignedIn ?? "No \(name) login found in this folder.")
         }
         let listed = logins.contains {
-            $0.values[rule.accountId.savedAs] == accountId || $0.folder?.url.resolvingSymlinksInPath().path == home
+            $0.values[ProviderDefinition.Accounts.accountIdValue] == accountId || $0.folder?.url.resolvingSymlinksInPath().path == home
         }
         guard accountId != plainAccountId(rule: rule), !listed else {
             throw UsageError.executionFailed("This \(name) account is already listed.")
         }
         let config = ProviderAccountConfig(
             accountId: UUID().uuidString.lowercased(), label: "", email: email,
-            probeConfig: values.merging([rule.accountId.savedAs: accountId]) { _, id in id },
+            probeConfig: values.merging([ProviderDefinition.Accounts.accountIdValue: accountId]) { _, id in id },
             madeBy: folder.madeBy
         )
         guard let account = add(config) else {
@@ -318,17 +318,18 @@ public final class Accounts {
     /// Who the plain login is, read the way an added folder's login is.
     private func plainAccountId(rule: ProviderDefinition.Accounts.Folder) -> String? {
         let sources = (try? configuration.sources(for: [:], isDefault: true)) ?? []
-        return sources.lazy.map { self.makeDataSource($0, self.id) }.compactMap { $0.value(of: rule.accountId.field) }.first
+        return sources.lazy.map { self.makeDataSource($0, self.id) }.compactMap { $0.value(of: rule.signedInAs.id) }.first
     }
 
-    /// Who is signed in with these values: the first data source that looks
-    /// up a key, filled with them. A folder whose key does not answer holds
-    /// no login, whatever else it holds.
-    private func signedIn(with values: [String: String], rule: ProviderDefinition.Accounts.Folder) -> (accountId: String?, email: String?)? {
-        guard let source = try? configuration.running.dataSources(forAccount: values).first(where: { $0.credential != nil }) else { return nil }
+    /// Who is signed in with these values — *Signed in as …*, read through
+    /// the first data source that looks up a key. A folder whose key does not
+    /// answer holds no login, whatever else it holds.
+    private func signedIn(to folder: String, rule: ProviderDefinition.Accounts.Folder) -> (accountId: String?, email: String?)? {
+        guard let source = try? configuration.running.dataSources(findingWhoIsSignedInTo: folder)
+            .first(where: { $0.credential != nil }) else { return nil }
         let live = makeDataSource(source, "\(id).new")
         guard live.hasKey else { return nil }
-        return (live.value(of: rule.accountId.field).flatMap { $0.isEmpty ? nil : $0 }, live.value(of: rule.email))
+        return (live.value(of: rule.signedInAs.id).flatMap { $0.isEmpty ? nil : $0 }, live.value(of: rule.signedInAs.email))
     }
 }
 

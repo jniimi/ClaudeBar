@@ -21,18 +21,26 @@
     {
       "kind": "cli",
       "label": "CLI",
-      "summary": "Runs `amp usage` with your Amp sign-in",
+      "summary": "Runs `amp usage` with your Amp API key, or with your Amp sign-in",
+      "credential": { "setting": "apiKey" },
+      "fetch": {
+        "command": {
+          "cli": "amp", "args": ["usage", "--no-color"], "timeout": 8,
+          "environment": { "set": { "AMP_API_KEY": "{{token}}" } }
+        }
+      },
+      "fallbackOn": { "authenticationRequired": "cliLogin" },
+      "mapping": { "script": { "file": "amp-usage.js" } },
+      "errors": { "cli.missing": { "cliNotFound": "AmpCode" } }
+    },
+    {
+      "kind": "cliLogin",
+      "label": "CLI sign-in",
+      "hidden": true,
+      "summary": "Runs `amp usage` with your Amp sign-in on this Mac",
       "fetch": { "command": { "cli": "amp", "args": ["usage", "--no-color"], "timeout": 8 } },
       "mapping": { "script": { "file": "amp-usage.js" } },
       "errors": { "cli.missing": { "cliNotFound": "AmpCode" } }
     }
-  ],
-  "accounts": {
-    "patch": {
-      "cli": {
-        "credential": { "setting": "apiKey" },
-        "fetch": { "command": { "environment": { "set": { "AMP_API_KEY": "{{token}}" } } } }
-      }
-    }
-  }
+  ]
 }

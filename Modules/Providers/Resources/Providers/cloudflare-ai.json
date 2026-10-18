@@ -77,8 +77,5 @@
         "http.403": { "sessionExpired": "Use a Cloudflare API token with Account Analytics: Read." }
       }
     }
-  ],
-  "accounts": {
-    "patch": { "api": { "credential": { "firstOf": null, "setting": "apiToken" } } }
-  }
+  ]
 }

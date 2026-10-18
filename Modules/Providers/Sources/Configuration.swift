@@ -195,13 +195,24 @@ public final class Configuration {
                                   setup: running.setup)
     }
 
-    /// A login's data sources as data: an added one's patched and filled
-    /// with its values, then every login's settings filled in.
+    /// A login's data sources as data: the default account's read as this
+    /// Mac is signed in, an added one's as its own sign-in reaches; then
+    /// every login's settings filled in.
     func sources(for values: [String: String], isDefault: Bool) throws -> [DataSourceDefinition] {
-        let sources = isDefault ? running.dataSources : try running.dataSources(forAccount: values)
+        let sources = isDefault ? try running.dataSources(forDefaultAccount: defaultAccountValues)
+                                : try running.dataSources(forAccount: values)
         let fills = settingFills(ownValues: isDefault ? [:] : values)
         guard !fills.isEmpty else { return sources }
         return try sources.map { try $0.filled(fills, scope: "setting") }
+    }
+
+    /// The default account's values: where the vendor keeps its login, and
+    /// each account-scope setting as saved for it, else its default.
+    public var defaultAccountValues: [String: String] {
+        definition.accountSettings.reduce(into: definition.defaultAccountValues) { values, setting in
+            guard setting.kind != .secret, let value = value(of: setting, ownValues: [:]) else { return }
+            values[setting.id] = value
+        }
     }
 
     /// Every `{{setting.x}}` a login's data sources are filled with.
