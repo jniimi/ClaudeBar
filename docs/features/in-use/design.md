@@ -17,7 +17,7 @@ User guide: [README.md](README.md). Mockup: `design-concept/in-use/index.html`.
 
 **New sessions of a CLI start on the login whose folder is recorded for it; ClaudeBar records it, the shell reads it, and nothing else moves.**
 
-In use is a **capability** ([CANONICAL §2.1](../../architecture/CANONICAL_MODEL.md#21--what-a-provider-owns-what-it-offers-and-what-it-isnt)): declared by `accounts.signIn`, reached as `provider.inUse` (`nil` when not declared), never a flag on `Provider`. Pieces and flows: [TARGET §9](../../architecture/TARGET_ARCHITECTURE.md#9--in-use-as-a-capability).
+In use is a **capability** ([CANONICAL §2.1](../../architecture/CANONICAL_MODEL.md#21--what-a-provider-owns-what-it-offers-and-what-it-isnt)): declared by `accounts.signIn` (the variable it writes is `accounts.cli.folderVariable`), reached as `provider.inUse` (`nil` when not declared), never a flag on `Provider`. Pieces and flows: [TARGET §9](../../architecture/TARGET_ARCHITECTURE.md#9--in-use-as-a-capability).
 
 ```
  views · claudebar://use · notification button          (render and tell — decide nothing)
@@ -48,10 +48,10 @@ No token is copied: each login keeps its own Keychain item and refresh token. No
 
 ```
 Provider
-└── inUse: InUse?  ◆                  nil unless accounts.signIn names a folder variable and a record exists
+└── inUse: InUse?  ◆                  nil unless accounts.signIn is declared and a record exists
     ├── login: Account                the plain login until another is chosen
     ├── logins: [Account]             the plain login + folder logins; offersChoice when > 1
-    ├── command: TerminalCommand ◇    accounts.signIn.cli + homeVariable
+    ├── command: TerminalCommand ◇    cli + accounts.cli.folderVariable
     ├── use(_) · forget(_)            forget is told by Provider.remove
     ├── worthSwitchingTo: Account?
     ├── review() → InUseNotice?       switched, or worth switching — told once per low

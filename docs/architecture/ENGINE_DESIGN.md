@@ -30,10 +30,11 @@ needs; each became a generic piece, never a vendor type:
 | 15-minute cache, a remembered 429 | `cache.ttl` (also the background floor) and rate-limit memory on `DataSource` |
 | the account's email and billing type | `context` files handed to the mapping |
 | the folder-trust prompt | `recover.patchJSONFile`, tried once |
-| Codex logins in their own folders (#326) | `accounts` (`folder`), `{{account.x}}`, `identity` (fail closed when a folder signs in to someone else), `requiresFiles` (#216; added logins only since #525), `verifyBeforeBackground`, JSON-RPC `then` + `environment` + `errors`, `fallback.sameLogin` (#525), `#jwt.claim` and `$credential.` paths |
+| an added login that must never read this Mac's key, logs or database (#577) | `withoutThisMac()` on each lookup, fetch, data source and usage log: a read that uses no account value is the default login's alone — no `accounts.patch` |
+| Codex logins in their own folders (#326) | `accounts` (`folder`, `cli`), `{{account.x}}`, `folder.accountId` given as every added login's `identity` (fail closed when a folder signs in to someone else, or holds no one), `verifyBeforeBackground` (the default login's), JSON-RPC `then` + `environment` + `errors`, `fallback.sameLogin` (#525), `#jwt.claim` and `$credential.` paths |
 | the usage API's model limits, plan and money | JSON mapping rules, not a script: `each` + `where`, names by `firstWord`/`lowercase`, `unique` (first wins), `overLimit` (negative left), `countdown: "hours"`, `plan.plans` from `$credential.`, and a list of `cost` shapes with `when` and exact `{amount, decimals}` minor units |
 | today's usage and guest passes | `UsageHistory` beside the providers (read with the popover open, never in the background; keyed by the login whose logs it reads) and the `GuestPasses` capability |
-| Claude logins in their own config folders | `accounts.folder` with `email` and `accountId.field` as an `IdentityField` (`$context.account.email`), `derived` values (the Keychain service, from a sha256 of the folder), `identity` read from a context file; today's usage and guest passes stay with the default login |
+| Claude logins in their own config folders | `accounts.folder` with `email` and `accountId.field` as an `IdentityField` (`$context.account.email`), `derived` values each with the `default` the vendor uses when no folder is set (the Keychain service, from a sha256 of the folder), identity read from a context file; today's usage and guest passes stay with the default login |
 | a date in a request: "the last 30 days" (OpenAI) | `{{system.day±N.<format>}}` from `SystemValues`, made with the fetch's `now` |
 | a file in a folder named by version, across several apps (JetBrains IDEs) | a `*` in any path, a path as a list, the most recently changed match — `Paths` |
 | a row of an app's own database as the answer (Windsurf) | `fetch.sqlite` over `ReadOnlyQuery`, shared with the `sqlite` key lookup |
@@ -644,10 +645,14 @@ credits* quota, `current` of `maximum`, resetting at `nextRefill.next`.
         "http.403": { "sessionExpired": "Use an organization Admin API key; project keys can't read spend." }
       }
     }
-  ],
-  "accounts": { "patch": { "api": { "credential": { "firstOf": null, "setting": "apiKey" } } } }
+  ]
 }
 ```
+
+An added OpenAI account needs no `accounts` block: its `apiKey` is an
+account-scope setting, so the `setting` lookup is its own, and
+`OPENAI_ADMIN_KEY` is this Mac's, read by the default login alone
+([what a login reads](../features/multi-account/design.md#what-a-login-reads--this-mac-is-the-default-logins)).
 
 `openai-costs.js` adds `data[].results[].amount.value` into one `cost`, a
 line per `line_item`, for "Last 30 days".
@@ -697,18 +702,14 @@ line per `line_item`, for "Last 30 days".
         "http.403": { "sessionExpired": "Sign in to app.devin.ai again, or paste a new session token." }
       }
     }
-  ],
-  "accounts": {
-    "patch": { "web": { "credential": { "firstOf": null, "setting": "token",
-                                        "with": { "organization": "{{setting.organization}}" } } } }
-  }
+  ]
 }
 ```
 
 `firstOf` tries each lookup in order and the first that finds a token wins;
 each brings its own values, so a browser token never travels with a pasted
-organization. `"firstOf": null` in `accounts.patch` drops that list for an
-added login, which uses only its own pasted token.
+organization. The browser's storage and `DEVIN_BEARER_TOKEN` are this Mac's,
+so an added login uses only its own pasted token.
 
 What the person sees:
 

@@ -127,8 +127,11 @@ Monitor  ◆                                  THE ROOT — what the menu bar is 
 │       │                                   by their own context, handed to each login filled with its
 │       │                                   values: `usageHistory` (a UsageLog.Definition) · `accounts.signIn`
 │       ├── accounts: Accounts  ◆           NEVER EMPTY. One account is the "default" — the plain login.
-│       │   │                               Its logins are INTERCHANGEABLE, and it is the one owner of the
-│       │   │                               rule that says so:
+│       │   │                               THIS MAC IS ITS: an added login reads only what uses its own
+│       │   │                               values (its folder, its key) — never an environment variable,
+│       │   │                               a fixed path, a fixed Keychain name, browser cookies or a local
+│       │   │                               database. Its logins are INTERCHANGEABLE, and it is the one
+│       │   │                               owner of the rule that says so:
 │       │   ├── unpaused → [Account]        DERIVED — the logins not paused
 │       │   ├── paused → [Account]          DERIVED — the PAUSED group
 │       │   ├── status                      DERIVED — unpaused-with-usage .map(status).min(): the product
@@ -141,7 +144,8 @@ Monitor  ◆                                  THE ROOT — what the menu bar is 
 │       │       ├── providerId          its product, by id — a value, never a reference
 │       │       ├── label · email           what you gave, or the login file holds — names the pill
 │       │       ├── values                  its account-scope settings — the Codex folder, the login's
-│       │       │                           account id; a secret as a reference
+│       │       │                           account id; a secret as a reference. Each has a default,
+│       │       │                           which is the default login's
 │       │       ├── isPaused                PAUSE without forgetting — no refresh, no pill, no judgement.
 │       │       │                           Its last numbers stay, printed as *last seen*. "Remove" forgets
 │       │       ├── usage: Usage?  ◇        WHAT WE LAST SAW — survives a failed refresh; carries the
@@ -186,8 +190,8 @@ Monitor  ◆                                  THE ROOT — what the menu bar is 
 │       │       │   ├── otherApps: [UsageHistory]   OTHER APPS ON THIS MAC that use the same plan and keep
 │       │       │   │                       their own count — Claude Desktop's daily total. Each its own
 │       │       │   │                       history, label and ledger, never summed with this one's days.
-│       │       │   │                       The definition's `usageHistory.otherApps`; an added login's
-│       │       │   │                       patch sets it to `null` — the apps belong to the Mac
+│       │       │   │                       The definition's `usageHistory.otherApps`; the apps belong
+│       │       │   │                       to this Mac, so only the default login reads them
 │       │       │   └── Day  ◇              ONE DAY — date (local) · THE SUM OF ITS LINES: one line
 │       │       │                           per model, a line holding what the day holds — tokens
 │       │       │                           input · output · cache write · cache read · cost
@@ -416,6 +420,7 @@ definition.missingSettings           → [Setting]    Import: "Key needed"
 | a login knows only itself: it names its product by id and never refers to it; anything product-level about a login is asked of its provider, found through `Providers.provider(of:)` — a stale login never crashes, nothing leaks | `Account` · `Providers` |
 | accounts are SIMULTANEOUS — every enabled login is fetched and shown side by side under its provider; the popover shows the selected provider's. (A vendor that allows one live login at a time would add an `active` account; none does today) | `Monitor.selection` |
 | one definition serves every account: the account's values fill `{{account.x}}` when the fetch runs; a data source is never copied per login | `DataSource` |
+| **this Mac is the default login's**: a definition is written once, for any login; the default login fills each account value from its default, and a read that uses no account value — an environment variable, a fixed path, a fixed Keychain name, browser cookies, a local database or log — is this Mac's, made by the default login alone. An added login can never show this Mac's numbers, whatever its definition forgets ([multi-account design](../features/multi-account/design.md#what-a-login-reads--this-mac-is-the-default-logins)) | `Accounts` (who may) · each DataSources node's `withoutThisMac()` (what touches this Mac) |
 | status is QUOTA health, derived from usage; a failed fetch is FETCH health, in `sync` — a key that expired never turns the menu bar red | `Account.status` · `Account.sync` |
 | **a product's logins are INTERCHANGEABLE** — a pool: the product reads its healthiest unpaused login (min), so one empty login never holds its product at DEPLETED while another has room; it reads DEPLETED only when every one is empty. Products are not: one product's room never covers another's, so the menu bar reads the worst product (max). Every login keeps its own truth — its row, pill and alert say its own status and when it resets. A login with no usage yet never stands for its product | `Accounts.status` · `Monitor.overallStatus` |
 | *in use* is the TERMINAL's choice, not the monitor's: every enabled login is still fetched and shown; only new `claude` / `codex` sessions start on the login in use. It is not the `active` account the law above rules out | `InUse` |
@@ -457,7 +462,7 @@ definition.missingSettings           → [Setting]    Import: "Key needed"
 | a worker reports a fact (a status, an exit code, a missing CLI) and the definition's `errors` says what it means, in a reason the screen prints — never from the response body or a secret; a 429 stays a rate limit | `DataSource` · `DataSourceError` |
 | a credential is looked up in the order the definition gives; the first that answers wins, and a refreshed token is written back where it was found | `CredentialLookup` |
 | when the active data source fails, its `fallback` is tried once; what the popover shows says which one answered. A signed-out login (*Authentication required*, *Session expired*) is not tried again on a fallback that reads the same login (`fallback.sameLogin`, #525) | `Provider` |
-| a data source held until checked (`verifyBeforeBackground`, #216) starts nothing in the background until a click succeeds; a signed-out answer holds it back again (#525) | `Provider` |
+| a data source held until checked (`verifyBeforeBackground`, #216) starts nothing in the background until a click succeeds; a signed-out answer holds it back again (#525). It holds the default login: an added login is checked by being added, and never marks or forgets the default's check | `Provider` |
 | a definition is valid before it is saved: a fetch, a mapping that produced at least one quota or a cost on Test, and every required setting filled | `ProviderDefinition` |
 | a built-in provider can be disabled but not deleted; a custom one can be both; an extension is removed by removing its folder | `ProviderCatalog` |
 | **an exported definition carries no secret** — the lookup order and each setting's name, never its value | `ProviderDefinition` |
@@ -478,7 +483,7 @@ definition.missingSettings           → [Setting]    Import: "Key needed"
 | usage history is per login: an added login reads its own folder's logs; two logins' days are never summed | `Account.usageHistory` |
 | a capability is declared by the definition — even one only a single product has (guest passes), whose runner the engine supplies — never chosen by a provider's name, never a vendor name in a module. Either way it is reached through the login's handle (`account.usageHistory`, `account.guestPasses`), `nil` when not offered | `Account` |
 | usage history is read when the popover opens, never in the background, and never carried on `Usage` | `UsageHistory` |
-| another app's usage on this Mac (Claude Desktop) is its OWN history under its own name: never summed with the login's days, never a data source, never a quota; the usual login reads it, an added login's patch removes it | `UsageHistory.otherApps` |
+| another app's usage on this Mac (Claude Desktop) is its OWN history under its own name: never summed with the login's days, never a data source, never a quota; the default login reads it; it is this Mac's, so an added login never does | `UsageHistory.otherApps` |
 | a login with no usage whose CLI isn't on this Mac, or that never signed in, is NOT SET UP — fetch health, not a failure: it says what setting up takes, keeps showing the usage history it can read, and the badge reads *NOT SET UP*, not *UNAVAILABLE* — or nothing, while that usage history shows: a Claude Desktop user did set Claude up, only the limits need more. Any other failure stays an error | `Account.needsSetup` · `ProviderBadgeState` |
 | a day with nothing is an empty day, not a missing one — a series has every date in its range | `UsageHistory.days(in:)` |
 

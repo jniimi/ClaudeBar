@@ -413,8 +413,13 @@ reproduce its output, quota for quota, before the Swift goes.
   account-scope setting in the form later); the provider owns `[Account]`;
   one definition serves every account, the account's values filled when the
   fetch runs. Accounts are simultaneous. **Built** for Codex (#356) and
-  Claude (`claude.json`'s `accounts`): `accounts.patch` and `{{account.x}}`,
-  one `Provider` owning its `Account`s. The rest is designed in
+  Claude (`claude.json`'s `accounts`): `{{account.x}}` and one `Provider`
+  owning its `Account`s. What an added login reads is one law, not a patch
+  per definition: **this Mac is the default login's** — a read that uses no
+  account value is left out for an added login, each DataSources node saying
+  so about itself (`withoutThisMac()`), and its CLI runs under `accounts.cli`
+  ([#577](https://github.com/tddworks/ClaudeBar/issues/577), replacing
+  `accounts.patch`). The rest is designed in
   [features/multi-account/design.md](../features/multi-account/design.md).
 - **A `command` fetch from the UI** — see [CANONICAL_MODEL §9](CANONICAL_MODEL.md#9--open).
 
@@ -451,7 +456,7 @@ switching, once per low) → `InUseAnnouncer`. *A link* —
 
 | A contributor wants… | They change |
 |---|---|
-| In use for another CLI whose logins are folders | its definition's `accounts.signIn` (`homeVariable`) — nothing else |
+| In use for another CLI whose logins are folders | its definition's `accounts.signIn` and `accounts.cli.folderVariable` — nothing else |
 | another shell | one case in `LoginShell`, its lines in `ShellSetup`, a test that runs it |
 | another policy than *Switch when low* | a policy beside `SwitchWhenLow` that `InUse.review` asks |
 | In use for API-key providers | an env-variable record and lines — `InUse` and `NewSessions` unchanged |
