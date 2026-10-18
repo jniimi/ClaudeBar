@@ -144,8 +144,8 @@ Monitor  ◆                                  THE ROOT — what the menu bar is 
 │       │       ├── providerId          its product, by id — a value, never a reference
 │       │       ├── label · email           what you gave, or the login file holds — names the pill
 │       │       ├── values                  its account-scope settings — the Codex folder, the login's
-│       │       │                           account id; a secret as a reference. Each has a default,
-│       │       │                           which is the default login's
+│       │       │                           account id; a secret as a reference. The default login's
+│       │       │                           folder is the definition's `folder.default`
 │       │       ├── isPaused                PAUSE without forgetting — no refresh, no pill, no judgement.
 │       │       │                           Its last numbers stay, printed as *last seen*. "Remove" forgets
 │       │       ├── usage: Usage?  ◇        WHAT WE LAST SAW — survives a failed refresh; carries the

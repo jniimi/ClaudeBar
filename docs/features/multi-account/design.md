@@ -116,12 +116,25 @@ default login       ✓ filled from its defaults         ✓
 added login         ✓ filled from its own values       ✗ this Mac's: left out
 ```
 
-**Every account value has a default, and the default is the default login's.**
-`folder` defaults to `folder.default` (`${CODEX_HOME:-~/.codex}`), or to the
-account setting's own `default` (`~/.kimi`); a `derived` value names its own
-(Claude Code calls its Keychain item `Claude Code-credentials` when no folder
-is set, `Claude Code-credentials-<hash>` when one is). A value the person saved
-on the default login wins over its default, as it always has.
+**The default login's folder is `folder.default`** (`${CODEX_HOME:-~/.codex}`),
+or the account setting's own `default` (`~/.kimi`), so a read written under
+`{{account.folder}}` serves it too. A value the person saved on the default
+login wins over its default, as it always has.
+
+**Where a vendor lays out the default login differently, the definition says
+both places where they are used** — never in a table of names to look up:
+
+```jsonc
+{ "keychain": { "service": "Claude Code-credentials" } },                             // this Mac's
+{ "keychain": { "service": "Claude Code-credentials-{{account.folder#sha256.8}}" } }  // the login's folder
+"context": { "account": { "path": ["{{account.folder}}/.claude.json",               // the login's
+                                   "${CLAUDE_CONFIG_DIR:-~}/.claude.json"] } }       // this Mac's
+```
+
+`#sha256.8` is a placeholder transform like `#host` and `#jwt.sub`: the first
+eight hex digits of the value's SHA-256, which is how Claude Code names a
+folder's Keychain item. A path list keeps, for an added login, only its own
+entries.
 
 **Each node decides about itself** — tell, don't ask, a Composite over
 `firstOf`:
@@ -153,7 +166,6 @@ an added login; that is the default.
   "folder": {                                       // "Choose Signed-in Folder"
     "default": "${CODEX_HOME:-~/.codex}",           // the default login's home
     "accountId": { "field": "$context.login.account" },  // who it is; checked on every fetch of an added login
-    "derived": { … },                               // values worked out from the folder, each with a default
     "notSignedIn": "…"                              // optional: the fix is vendor-specific
   },
   "signIn": { "args": ["login"] },                  // "Sign in with browser": the vendor's login command
@@ -171,7 +183,6 @@ an added login; that is the default.
 |---|---|
 | `folder.default` | the default login's folder; fills `{{account.folder}}` for it, and is never added a second time |
 | `folder.accountId.field` | the fact that names the login, read through a lookup or a `context` file under `{{account.folder}}`. `Provider` gives every data source of an added folder login an `identity` from it, so a folder signed in to someone else fails closed. A missing file reads as no one: fail closed, never another login |
-| `folder.derived` | a value worked out from the folder (`prefix` + `sha256` of its path, or the folder itself), with the `default` the vendor uses when no folder is set |
 | `folder.notSignedIn` | optional; what to do differs per vendor |
 | `signIn.args` | the vendor's login command; its program is the definition's `cli`, its environment `accounts.cli` |
 | `cli.environment.set` | the variables that point the vendor's CLI at the folder — `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, or Kiro's `HOME` and `XDG_*` — written as a CLI fetch's `environment` already is. Fetch, refresh and sign-in run with them, and *In use* writes the same lines into the person's shell |
@@ -183,7 +194,8 @@ under the old names (`codexHome`, `configDirectory`, Gemini's, Kimi's and
 Kiro's `home`; `chatgptAccountId`, `loginEmail`) are read through the
 compatibility tables
 ([settings.md](../../settings.md)); `requiresFiles` — a folder whose login file is
-missing holds no one; `signIn.cli`, `signIn.homeVariable` and `signIn.unset` —
+missing holds no one; `folder.derived` — `{{account.folder#sha256.8}}` and a path
+list, said where they are used; `signIn.cli`, `signIn.homeVariable` and `signIn.unset` —
 the definition's `cli` and `accounts.cli`, said once.
 
 A provider whose added login uses a different thing than its default login
@@ -221,7 +233,7 @@ diff:
 | **Account** | one login you pay for: who, its values, what we last saw | a data source; a provider |
 | **default account** | the plain login the CLI already uses; id = provider id; never removed | "the first added one" |
 | **added account** | a login beside it; id `<provider>.<acct>` | a copy of the provider |
-| **account values** | the account-scope settings that fill `{{account.x}}` — a folder, a login id, a region. Each has a default, which is the default login's | secrets |
+| **account values** | the account-scope settings that fill `{{account.x}}` — a folder, a login id, a region. The default login's folder is `folder.default` | secrets |
 | **this Mac** | what every program on the Mac sees: environment variables, fixed paths, fixed Keychain names, browser cookies, local databases and logs. The default login's, never an added one's | the default login's folder, which is one of its values |
 | **folder** (the account value) | the folder a login lives in, `{{account.folder}}` — a signed-in folder for an added login, `folder.default` for the default one. The vendor's own word for it (`CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `GEMINI_CLI_HOME`) appears only in `accounts.cli.environment.set` | `$HOME` |
 | **account secret** | an account-scope secret (an API key) — a *name*, its value in the vault under that account | a value in `settings.json` |
@@ -300,14 +312,14 @@ into JSON, and not before.
 
 | Case | JSON | Carries | What it does |
 |---|---|---|---|
-| **folder** | `"folder": { default, accountId: {field}, email?, derived?, notSignedIn? }` | where the login lives, which field names it | reads the folder through the definition's own credential/context lookup (filled with that folder), refuses the default folder and duplicates, saves `{home: folder, accountId: fact}` |
+| **folder** | `"folder": { default, accountId: {field}, email?, notSignedIn? }` | where the login lives, which field names it | reads the folder through the definition's own credential/context lookup (filled with that folder), refuses the default folder and duplicates, saves `{home: folder, accountId: fact}` |
 | **signIn** | `"signIn": { args, timeout? }` | the vendor's login command ([where its CLI is](../../architecture/ENGINE_DESIGN.md#27--where-a-providers-cli-is)) | makes `~/.claudebar/accounts/<provider>/<uuid>/` (0700), runs the definition's `cli` with `args` under `accounts.cli` (the folder as `{{account.folder}}`), waits; on exit 0 the provider checks the folder as **folder** does, recorded `madeBy: .signIn` |
 | **form** | `"form": true` | — | renders the form's account-scope settings; non-secrets → `values`, secrets → the account's vault; then *Test Connection* with them before saving |
 
 `signIn` requires `folder` (it ends in one) — a definition with one and not
-the other is refused on load. `derived` — #358's
-`derivedValues`, e.g. Claude's Keychain service `Claude Code-credentials-<hash8>`
-— is a feature of the folder rule, so stays.
+the other is refused on load. #358's `derivedValues` (Claude's Keychain service
+`Claude Code-credentials-<hash8>`) is now said where it is used, as
+`{{account.folder#sha256.8}}` (#577).
 
 ### `Account` — one login
 
@@ -586,7 +598,7 @@ are the cases the definition declares (§8).
 | a provider has at least one account; the default's id is the provider id, an added one's `<provider>.<acct>` | `Provider.accounts` |
 | one definition serves every account — an added login's data sources are the definition without this Mac's reads, filled with its values; never a hand-built copy | `ProviderDefinition.dataSources(forAccount:)` |
 | **this Mac is the default login's**: an added login never makes a read that uses no account value — an environment variable, a fixed path, a fixed Keychain name, browser cookies, a local database or log | `Accounts` (who may) · each DataSources node's `withoutThisMac()` (what touches this Mac) |
-| every account value has a default, and the default login fills its values from them; a value it saved wins | `ProviderDefinition` |
+| the default login's folder is `folder.default` (or the folder setting's `default`), so a read under `{{account.folder}}` serves it too; a value it saved wins | `ProviderDefinition` |
 | a provider without `accounts` cannot add one — the button is absent, not disabled | `ProviderDefinition.accounts` |
 | an account's secret is read only from that account's vault corner; a missing one is *Key needed*, never the default's key or the environment | `SecretStore.scoped(to:)`, used by every added login's data sources |
 | an added login's CLI never sees the default login's credentials: what to point at its folder, unset and add is `accounts.cli`, said once and applied to every CLI run of an added login — fetch, refresh, sign-in | the definition (data) — run by `CLIFetcher` |
