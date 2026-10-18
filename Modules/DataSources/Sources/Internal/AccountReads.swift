@@ -1,41 +1,40 @@
 import Foundation
 
-// THIS MAC IS THE DEFAULT LOGIN'S (#577). A read that uses no account value —
-// an environment variable, a fixed path or Keychain name, browser cookies, an
-// app's own database or server — reads what every program on this Mac sees,
-// so only the default login makes it. Each piece of a definition says which
-// of its reads those are; none of them knows what a login is.
+// What an added account's sign-in reaches (#577): each piece of a definition
+// keeps the reads that name the account — `{{account.x}}`, a pasted setting —
+// and leaves out the rest, which read what every program on this Mac sees:
+// the default account's. None of them knows what an account is.
 
 extension CredentialLookup {
     /// This lookup without what it reads of this Mac — `nil` when nothing of
     /// the login's own is left. A pasted key is always the login's: its vault
     /// is already scoped to it.
-    public func withoutThisMac() -> CredentialLookup? {
+    func accountReads() -> CredentialLookup? {
         switch self {
         case .environment, .browserCookies, .browserStorage:
             nil
         case .setting:
             self
         case .jsonFile(let file):
-            file.withoutThisMac().map(CredentialLookup.jsonFile)
+            file.accountReads().map(CredentialLookup.jsonFile)
         case .keychain(let item):
             AccountValues.used(by: item.service) ? self : nil
         case .sqlite(let database):
-            database.path.withoutThisMac() == nil ? nil : self
+            database.path.accountReads() == nil ? nil : self
         case .refined(let lookup, let refinement):
-            lookup.withoutThisMac().map { .refined($0, refinement) }
+            lookup.accountReads().map { .refined($0, refinement) }
         case .refreshing(let lookup, let refresh):
-            lookup.withoutThisMac().map { .refreshing($0, refresh) }
+            lookup.accountReads().map { .refreshing($0, refresh) }
         case .firstOf(let lookups):
-            Optional(lookups.compactMap { $0.withoutThisMac() }).flatMap { $0.isEmpty ? nil : .firstOf($0) }
+            Optional(lookups.compactMap { $0.accountReads() }).flatMap { $0.isEmpty ? nil : .firstOf($0) }
         }
     }
 }
 
 extension JSONFileCredential {
     /// The file in the login's own places only.
-    public func withoutThisMac() -> JSONFileCredential? {
-        path.withoutThisMac().map {
+    func accountReads() -> JSONFileCredential? {
+        path.accountReads().map {
             JSONFileCredential(path: $0, fields: fields, alternatives: alternatives, record: record, defaults: defaults)
         }
     }
@@ -43,7 +42,7 @@ extension JSONFileCredential {
 
 extension PathPattern {
     /// The places that use an account value — a list keeps its own entries.
-    public func withoutThisMac() -> PathPattern? {
+    func accountReads() -> PathPattern? {
         let own = places.filter(AccountValues.used(by:))
         return own.isEmpty ? nil : PathPattern(own)
     }
@@ -55,7 +54,7 @@ extension Fetch {
     /// login only when it is pointed at the login's folder or handed its key;
     /// otherwise it answers as this Mac's login. A file, folder or database at
     /// a fixed path, and an app's server, are this Mac's.
-    public func withoutThisMac() -> Fetch? {
+    func accountReads() -> Fetch? {
         switch self {
         case .http, .httpSteps:
             self
@@ -75,18 +74,18 @@ extension DataSourceDefinition {
     /// This data source as an added login runs it: without this Mac's reads,
     /// or `nil` when its key or its fetch is only this Mac's. Context files,
     /// required files and recoveries at fixed places are left out with it.
-    public func withoutThisMac() -> DataSourceDefinition? {
+    func accountReads() -> DataSourceDefinition? {
         var credential = self.credential
         if let lookup = self.credential {
-            guard let own = lookup.withoutThisMac() else { return nil }
+            guard let own = lookup.accountReads() else { return nil }
             credential = own
         }
-        guard let fetch = fetch.withoutThisMac() else { return nil }
+        guard let fetch = fetch.accountReads() else { return nil }
         return DataSourceDefinition(
             kind: kind, label: label, summary: summary, note: note, hidden: hidden,
             credential: credential, fetch: fetch, mapping: mapping,
             fallback: fallback, fallbackOn: fallbackOn, cache: cache,
-            context: context.compactMapValues { $0.withoutThisMac() },
+            context: context.compactMapValues { $0.accountReads() },
             recover: recover.filter { AccountValues.used(by: $0.value) },
             requiresFiles: requiresFiles.filter(AccountValues.used(by:)),
             identity: identity,
@@ -99,7 +98,7 @@ extension DataSourceDefinition {
 extension UsageLog.Definition {
     /// The usage history an added login reads: its own logs, without the
     /// other apps on this Mac — `nil` when the logs are this Mac's.
-    public func withoutThisMac() -> UsageLog.Definition? {
+    func accountReads() -> UsageLog.Definition? {
         guard AccountValues.used(by: records) else { return nil }
         let apps = otherApps?.filter { AccountValues.used(by: $0.records) }
         return UsageLog.Definition(

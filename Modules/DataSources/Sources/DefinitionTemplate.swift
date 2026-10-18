@@ -44,6 +44,25 @@ extension DefinitionTemplate {
     }
 }
 
+extension DataSourceDefinition {
+    /// The data source as an added account's sign-in reaches it (#577): its
+    /// reads that name nothing of the account — an environment variable, a
+    /// fixed path or Keychain name, browser cookies, an app's own database —
+    /// are this Mac's and left out, the rest filled with the account's
+    /// values. `nil` when its key or its fetch is only this Mac's.
+    public func forAccount(_ values: [String: String]) throws -> DataSourceDefinition? {
+        try accountReads()?.filled(values, scope: "account")
+    }
+}
+
+extension UsageLog.Definition {
+    /// The usage history an added account's sign-in reaches: its own logs,
+    /// filled with its values — never this Mac's, nor its other apps.
+    public func forAccount(_ values: [String: String]) throws -> UsageLog.Definition? {
+        try accountReads()?.filled(values, scope: "account")
+    }
+}
+
 /// `{{<scope>.<name>}}` in a definition's strings.
 enum Placeholders {
     static func fill(_ text: String, _ values: [String: String], scope: String) -> String {
