@@ -6,10 +6,8 @@ description: Contributor design for multiple accounts under one provider — how
 
 User guide: [README.md](README.md).
 
-**Being rebuilt ([#577](https://github.com/tddworks/ClaudeBar/issues/577)):
-`accounts.patch` gives way to one law, [§ What an account's sign-in reaches](#what-an-accounts-sign-in-reaches).**
-Until it lands, an added login still runs the definition with `accounts.patch`
-merged in; the sections below describe the design it is moving to.
+**Built ([#577](https://github.com/tddworks/ClaudeBar/issues/577)): one law in
+place of `accounts.patch` — [§ What an account's sign-in reaches](#what-an-accounts-sign-in-reaches).**
 
 **Status: BUILT, slices 1–7.** Built: one `Provider` owns `[Account]`; an
 added login runs the **same** data sources with `{{account.x}}` filled from

@@ -211,9 +211,13 @@ This plan covered the API probe. What was learned afterwards, mostly about the R
 ## Independent Codex accounts
 
 Additional accounts reuse `ProviderAccountConfig` and `MultiAccountSettingsRepository`.
-`codex.json`'s `accounts` says how one is added (`folder`: saved as `codexHome`,
-its login's `account` claim saved as `chatgptAccountId`; `signIn`: `codex -c cli_auth_credentials_store="file" login` with `CODEX_HOME` set), and what an added login changes: `accounts.patch`, an RFC 7396 merge patch
-per data source kind (`"tty": null` leaves the terminal out). One Codex `Provider`
+`codex.json`'s `accounts` says how one is added and how it is signed in, once
+(#577): `folder` (the default `${CODEX_HOME:-~/.codex}`, and `signedInAs` — its
+`auth.json`, `id` from `$.tokens.account_id`, `email` from the ID token),
+`signIn` (`codex login`), and `cli` (`CODEX_HOME` set to the folder, the other
+OpenAI auth variables unset, `-c cli_auth_credentials_store="file"`). Every data
+source is written once under `{{account.folder}}`; the default account fills it
+with `${CODEX_HOME:-~/.codex}`. One Codex `Provider`
 (the product) owns its `Account`s (the logins, [CANONICAL_MODEL](../../architecture/CANONICAL_MODEL.md#1--the-tree));
 `provider.addAccount(signedInAt:)` checks a folder and adds it (`provider.signIn()` runs `codex login` into a new one first), compound ID
 `codex.<local UUID>`, the default keeping `codex`. Each login is its own pill,
@@ -225,13 +229,13 @@ ID, never tokens. Setup rejects duplicate directories (including symlinks), the
 default directory and duplicate ChatGPT account IDs. Email is a display identifier,
 not an authentication key; separate workspaces can share an email.
 
-The `identity` rule checks the expected account ID before and after a fetch.
-Both data sources read the account's own `{{account.codexHome}}/auth.json`; a
-refreshed API token is written back only there. RPC sets `CODEX_HOME` on the child
-process, unsets the other OpenAI auth variables, and forces file credential storage
-(`-c cli_auth_credentials_store="file"`) for added accounts, which have no TTY
-fallback — the terminal would read the global login. Missing or replaced credentials
-fail closed. A provider coalesces simultaneous refreshes so overlapping UI and
+`signedInAs.id` is checked before and after every fetch of an added account.
+Every data source reads the account's own `{{account.folder}}/auth.json`; a
+refreshed API token is written back only there. Every run of `codex` for an added
+account — the RPC, the terminal fallback, sign-in — goes through `accounts.cli`,
+so the terminal reads the folder's login too and an added account keeps the
+fallback (`sameLogin` still skips it when signed out). Missing or replaced
+credentials fail closed. A provider coalesces simultaneous refreshes so overlapping UI and
 background polls cannot rotate its refresh token twice.
 
 RPC identity comes from `account/read` with `refreshToken: false`, which also

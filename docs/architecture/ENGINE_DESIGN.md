@@ -476,8 +476,8 @@ cannot run at all. An app that moves its records between versions keeps
 one query per set of tables, in order, each naming the tables it
 `requires`; the call runs the first one whose tables the store has. Which
 tables a store has is where to read, not another way to get usage, so it
-stays inside the fetch: the data source, its kind, the chain and an added
-login's patch don't change when the app moves its tables again. It is
+stays inside the fetch: the data source, its kind and the chain don't
+change when the app moves its tables again. It is
 never a version flag: the question is which tables this store has, not
 which release wrote it. A plain `query` is one query that requires
 nothing. It runs on the one SQLite

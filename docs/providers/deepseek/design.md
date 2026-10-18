@@ -11,8 +11,8 @@ and no vendor-named Swift inside a module.
 ```text
 deepseek.json ──► Provider owns default + added Accounts
                       │
-                      ├── credential: environment → setting (default)
-                      └── accounts.patch: setting only (added login)
+                      ├── credential: environment → setting
+                      └── an added login reaches its setting only (#577)
                                       │
                              account-scoped ProviderVault
                                       │

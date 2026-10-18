@@ -18,7 +18,7 @@ A `command`: `kiro-cli` over pipes, given `/usage\n/quit\n` on stdin, with a 30-
 
 ## Accounts
 
-An added account is a **home folder** someone signed in to with `kiro-cli` (a `path` setting, `mustExist`). Its `accounts.patch` runs the same command with `HOME`, `KIRO_HOME` and the XDG folders pointing into that folder, and with `KIRO_API_KEY` unset. `requiresFiles` makes a folder that has since gone *Key needed* rather than letting `kiro-cli` start a sign-in of its own (#216).
+An added account is a **home folder** someone signed in to with `kiro-cli` (a `path` setting, `mustExist`). `accounts.cli` runs the same command with `HOME`, `KIRO_HOME` and the XDG folders pointing into that folder, and with `KIRO_API_KEY` unset (#577). A folder that has since gone is *Key needed* rather than letting `kiro-cli` start a sign-in of its own (#216): a folder an account was given must still be there.
 
 - **Folders are never shared.** `Provider` refuses a folder another login already uses.
 - **Re-sign-in.** The Accounts card asks the person to sign in again in that folder.

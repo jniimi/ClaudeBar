@@ -69,13 +69,14 @@ writes a record more than one way lists its `shapes` (below).
     }
   },
   "prices": { "file": "claude-prices.json" },    // a PriceList — or { "service": "AmazonBedrock" }, through PriceCatalog
-  "freeWhen": { "localEndpoint": { "file": "${CLAUDE_CONFIG_DIR:-~}/.claude.json",
+  "freeWhen": { "localEndpoint": { "file": ["{{account.folder}}/.claude.json", "${CLAUDE_CONFIG_DIR:-~}/.claude.json"],
                                    // the first entry that answers decides; a list is one entry
                                    "url": ["$.env.ANTHROPIC_BASE_URL",
                                            ["$.providers[*].base_url", "$.providers[*].env.ANTHROPIC_BASE_URL"]] } },
   "sessionGap": 1800
-},
-"accounts": { "patch": { "usageHistory": { "records": { "files": "{{account.configDirectory}}/projects/**/*.jsonl" } } } }
+}
+// "records": { "files": "{{account.folder}}/projects/**/*.jsonl" } — written once,
+// for any account: the default fills {{account.folder}} with ${CLAUDE_CONFIG_DIR:-~/.claude}
 ```
 
 ```jsonc
@@ -111,10 +112,12 @@ writes a record more than one way lists its `shapes` (below).
   price list (`{ "service": … }`) is fetched through the `PriceCatalog` port
   Bedrock uses (#417) into the same `PriceList`. A tool that writes its own
   cost needs neither.
-- **Per login, like data sources.** The default login reads `usageHistory`; an
-  added login gets `accounts.patch.usageHistory` merged in and its values filled
-  (`{{account.configDirectory}}`), so an added Claude login has its own
-  usage history for the first time. A definition without `usageHistory` has none.
+- **Per login, like data sources.** `usageHistory` is written once, for any
+  login (#577): the default login fills `{{account.folder}}` from
+  `folder.default`; an added login reads it with its own folder, so an added
+  Claude login has its own usage history. A log at a fixed place (OpenCode's
+  database, `~/.vibe`) is this Mac's: an added login has none. A definition
+  without `usageHistory` has none.
 - **Money stays exact.** Prices are decimal texts; cost is
   tokens × price ÷ `per` in `Decimal`, shown as an estimate unless the record
   gave its own `cost`.
@@ -294,10 +297,9 @@ money — so it is one record in two shapes:
 }
 ```
 
-Files and format describe the log; paths and filters describe a shape. So an
-added login's `accounts.patch.usageHistory` moves the log —
-`{ "records": { "files": "…" } }` — and keeps its shapes, since a merge patch
-leaves the keys it doesn't name. Left out on purpose: shapes in different
+Files and format describe the log; paths and filters describe a shape. So a
+log written under `{{account.folder}}` moves with the login and keeps its
+shapes. Left out on purpose: shapes in different
 files are different logs, not another shape (a list of logs, added when a
 tool needs one), and shapes don't inherit shared fields — omp repeats `at`
 and `id`, and each shape reads on its own.
@@ -309,7 +311,7 @@ Claude Desktop's `buddy-tokens.json` is `format: json`, `tokens.total`, and
 with a format, local unless it names a `timeZone`. Each is its own
 `UsageHistory` with its own ledger key (`<login>/<label>`), shown as its own
 card, never summed with the login's days; without prices it has tokens and
-no cost. An added login's patch sets `otherApps` to `null`. A token count that
+no cost. The other apps are this Mac's, so an added login has none. A token count that
 is negative or not whole drops the record. Design:
 [other-apps-design.md](other-apps-design.md).
 
@@ -405,7 +407,7 @@ renders what `Days` answers.
 | Codex's usage history (`~/.codex/sessions/**/rollout-*.jsonl`, whose `token_count` events carry a session's **running total**) | `codex.json`'s `usageHistory`, plus one reader option, `"cumulative": true` (the last record per session counts), with a neutral test |
 | Oh My Pi's usage history (turns, subagents and side calls in `~/.omp/agent/sessions/**/*.jsonl`, copied whole into forked sessions) | `omp.json`'s `usageHistory`: one log, two `shapes`, and `id: [$.id, $.timestamp]` — the identity omp's own stats use for fork copies |
 | a binary log format | one new reader, named for the format |
-| an added login's own usage history | nothing: `accounts.patch.usageHistory` |
+| an added login's own usage history | nothing: its log path names `{{account.folder}}` |
 
 ## 6 · Guest passes stay Swift
 

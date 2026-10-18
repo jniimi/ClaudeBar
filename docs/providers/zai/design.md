@@ -20,7 +20,7 @@ Z.ai is `Modules/Providers/Resources/Providers/zai.json` and `zai-usage.js`, run
 - **A file key is used only for a Z.ai host.** `jsonFile` reads `env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_BASE_URL`, then `providers[0].api_key`/`base_url`, then top-level `api_key`; `match` refuses the record unless `baseURL` is on `api.z.ai`, `open.bigmodel.cn` or `dev.bigmodel.cn` (anchored, so `api.z.ai.example.com` is not one). The old probe also searched the whole file for a host, which could pair one entry's key with another's URL; that's gone, as is the `claude`-on-PATH check, which the quota API never needed.
 - **Environment.** `glmAuthEnvVar` defaults to `ZAI_API_KEY`. The lookup says `"loginShell": true`, so the engine's login-shell port reads it: the app's environment first, then the login shell through `ShellEnvironment` and `LoginShellEnvironment`, whose name check and markers are unchanged (#170). Only this lookup asks the shell — availability checks run the same lookup, and no other provider's lookup waits for a shell.
 - **Errors.** 401 and 403 are *Key needed*; no key anywhere is *Key needed*.
-- **Accounts.** An added account is a key and a platform (`accounts.patch`); it never reads the file or the environment.
+- **Accounts.** An added account is a key and a platform; the file and the environment are this Mac's, so it never reads them (#577).
 - **Compatibility.** The saved key moves from its old Keychain name through `ProviderVault.legacyKeys`; `zai.configPath` and `zai.glmAuthEnvVar` are already `<id>.<setting>`. A leading `~` in the path is now expanded.
 
 ## Response

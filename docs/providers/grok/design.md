@@ -10,7 +10,7 @@ Grok is `Modules/Providers/Resources/Providers/grok.json` and `grok-billing.js`,
 - **The refresh goes to the record's own issuer.** It is `{{issuer}}/oauth2/token` (no doubled slash when the issuer ends in `/`), with `client_id` only when the record names one. This is where the refresh token came from, recorded in the same file, so a definition cannot send it anywhere else. It refreshes 5 minutes before an ISO 8601 `expires_at`, never for a record with none, and once on a 401/403. An empty `refresh_token` in the answer never replaces the saved one.
 - **Errors.** A rejected refresh or a still-rejected token gives the `grok login` hint. A record with no refresh token that is refused is *Key needed*, as for any API-key login (the old probe gave the hint).
 - **Windows and money.** The period the server names is the quota's name and window: WEEKLY stays a weekly quota, MONTHLY and DAILY name theirs. With no period, the quota is "Usage" with no window, where the old probe guessed weekly. No usage reported is no quota, where the old probe showed 100%. The On-Demand cap's unit isn't stated, so it stays a share of the cap.
-- **Accounts.** An added account is a folder holding its own `auth.json` (`path` setting); `requiresFiles` fails closed when it is gone.
+- **Accounts.** An added account is a folder holding its own `auth.json` (the `directory` path setting, default `~/.grok`); the credential is written once as `{{account.directory}}/auth.json`, and a folder that is gone fails closed (#577).
 
 ## Source
 

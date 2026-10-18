@@ -94,8 +94,11 @@ Deleting the file resets every setting to its default. Secrets stay where they a
 ## Additional Codex accounts
 
 `providers.codex.accounts` stores `ProviderAccountConfig` entries: an opaque local
-`accountId`, empty `label`, login `email`, and `probeConfig.codexHome` plus
-`probeConfig.chatgptAccountId`. Tokens remain in that Codex home's `auth.json`.
+`accountId`, empty `label`, login `email`, and `probeConfig.folder` plus
+`probeConfig.accountId` (who is signed in to that folder). Tokens remain in that
+Codex home's `auth.json`. Accounts saved before #577 as `codexHome` /
+`chatgptAccountId` (Claude: `configDirectory` / `loginEmail`) are read under the
+new names through `JSONSettingsRepository.renamedAccountValues`.
 Instances use `codex.<accountId>` for enabled state and menu bar selection/settings;
 the original account keeps `codex`. `codex.probeMode` remains shared.
 Removing an account deletes its entry and menu bar selection, not its Codex files.

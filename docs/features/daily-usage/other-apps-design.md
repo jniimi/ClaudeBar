@@ -11,7 +11,7 @@ User guide: [README.md](README.md) · Mockup: [design-concept/claude-desktop-tok
 as a third Claude data source; its fixtures are the tests here. Built:
 `UsageLog.At.formatted`, whole non-negative counts, `UsageLog.OtherApp` and
 `Definition.otherApps`, `UsageHistory.label` / `otherApps` / `usedOtherApps`,
-Claude's entry and patch line, the popover card, and *not set up*
+Claude's entry, the popover card, and *not set up*
 (`Account.needsSetup`, the definition's `setup`, `ProviderBadgeState.notSetUp`),
 which lets a user without Claude Code see the card.
 
@@ -23,7 +23,7 @@ Its neighbours own the rest:
 |---|---|
 | how a login's own logs become days: dedup, prices, the ledger | [design.md](design.md) · [dedup.md](dedup.md) |
 | Claude's data sources (CLI, API) and their fallbacks | [providers/claude/design.md](../../providers/claude/design.md) |
-| added logins and `accounts.patch` | [multi-account/design.md](../multi-account/design.md) |
+| added logins, and what their sign-in reaches | [multi-account/design.md](../multi-account/design.md) |
 | the tree lines and the two laws (`UsageHistory.otherApps`, `Account.needsSetup`) this design adds | [CANONICAL_MODEL.md](../../architecture/CANONICAL_MODEL.md) §1, §5; [daily-usage design §2](design.md#2--the-definition-usagehistory-beside-datasources) |
 
 ---
@@ -103,7 +103,7 @@ Provider "claude"
             └─ ledger: DayLedger            keyed "<login>/<label>", apart from the login's own days
                                             (the login's own fingerprint ignores otherApps, so no kept day re-sums)
 Account (added login)
-└─ usageHistory                             the patch sets otherApps to null, so it has none
+└─ usageHistory                             other apps are this Mac's (fixed paths), so it has none
 ```
 
 The definition follows the same tree:
@@ -124,12 +124,9 @@ The definition follows the same tree:
       "tokens": { "total": "$.tokens-today.tokens" }
     }
   }]
-},
-"accounts": { "patch": { "usageHistory": {
-  "records":  { "files": "{{account.configDirectory}}/projects/**/*.jsonl" },
-  "freeWhen": { … },
-  "otherApps": null
-} } }
+}
+// an added login reads usageHistory with its own folder; the other apps name
+// no account value, so they are this Mac's and never reach it (#577)
 ```
 
 An `otherApps` entry is a `UsageLog.Definition` plus a `label`. It has no
@@ -150,8 +147,8 @@ TwoColumnCardGrid(items: history.usedOtherApps, id: \.label) { app in
 ```
 
 Asks to avoid:
-- `if account.isDefault { show Desktop }` in the view. The patch already decides
-  which login has other apps.
+- `if account.isDefault { show Desktop }` in the view. The definition already
+  decides which login has other apps: they are this Mac's.
 - `if stat.date != today { hide }` anywhere. A record dated yesterday is
   yesterday's usage, and the day buckets already put it there.
 - A `switch` on `"Claude Desktop"`. The label is data.
@@ -161,7 +158,7 @@ Asks to avoid:
 | Law | Owner |
 |---|---|
 | A data source answers "how much is left"; an other app never appears in Claude Configuration | `ProviderDefinition`: `otherApps` lives under `usageHistory`, not `dataSources` |
-| An other app shows on the usual login only | `claude.json`'s `accounts.patch`: `"otherApps": null` (merge patch, *exists*) |
+| An other app shows on the usual login only | its paths name no account value, so it is this Mac's (#577) |
 | An other app's tokens are never added to the login's own totals | `UsageHistory`: each other app is its own history with its own report |
 | Without prices, an app shows tokens and no cost | `UsageLog.knowsCost` (*exists*) |
 | A count is on the day its file names, in the user's time zone | `UsageLog.At`: a field read with a `format`, local unless `timeZone` says otherwise (§Rich types) |
@@ -208,12 +205,12 @@ Each slice is test-first and green before the next.
    today 0 and yesterday 74,422; a negative, fractional or missing count drops
    the record; `knowsCost` is false.
 3. **`otherApps` in the definition.** `UsageLog.Definition` decodes and encodes
-   `otherApps`; an entry has a `label`. The patch with `"otherApps": null`
-   removes it (`usageHistory(forAccount:)`).
+   `otherApps`; an entry has a `label`. An added login has none: its paths name
+   no account value (`usageHistory(forAccount:)`, #577).
 4. **`UsageHistory.otherApps`.** `Providers.history` makes one `UsageHistory` per
    entry with ledger key `<login>/<label>`. `read()` reads them. The usual login
    has Claude Desktop; an added login has none.
-5. **`claude.json`.** Add the entry and the patch line. `ClaudeTests` pin both
+5. **`claude.json`.** Add the entry. `ClaudeTests` pin it
    against the real definition.
 6. **The popover.** One tokens card per other app with a report, titled by its
    label, after the login's own Today cards and behind the same Daily Usage
@@ -248,7 +245,7 @@ Each slice is test-first and green before the next.
 4. **A switch per app.** Daily Usage Cards turns every card off. Is a
    per-app switch needed (the QUOTAS card pattern)? Not in the first slices.
 5. ~~**A new top-level key (`localApps`) or inside `usageHistory`?**~~ Inside
-   `usageHistory`. The added-login merge patch can then remove it with `null`,
+   `usageHistory`. An added login never reaches it, since it reads this Mac,
    with no new rule, and the definition says that an app's usage is usage history.
 6. ~~**One record list, merged into the login's totals?**~~ No. Desktop's file has
    no model, so the price list would charge it at Sonnet rates and invent a cost,

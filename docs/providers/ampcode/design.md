@@ -8,7 +8,7 @@ Amp is `Modules/Providers/Resources/Providers/ampcode.json` and `amp-usage.js`, 
 
 - **Fetch:** a `command`, `amp usage --no-color`, over pipes with an 8-second timeout. The old probe ran it in a terminal; the command prints plain text either way, and its exit code is now a fact (`cli.nonzero`) rather than something the probe checked by hand.
 - **Default login:** runs with the CLI's own sign-in and needs no credential, so it has no hand-off source.
-- **Added accounts:** `accounts.patch` gives each one `{"setting": "apiKey"}` (its access token, from the vault) and sets `AMP_API_KEY: {{token}}` in that one process's environment.
+- **Added accounts:** two data sources (#577). `cli` reads the account's `apiKey` (from the vault) and sets `AMP_API_KEY: {{token}}` in that one process's environment; with no key it hands off to `cliLogin`, which runs `amp` with its own sign-in — this Mac's, so the default account's alone.
 - **Errors:** `cli.missing` keeps the old *CLI not found: AmpCode*.
 - **Money:** the Free allowance is `left: { money, of }`, which replaces the old share plus a `$17.59/$20.00` reset text. The Individual balance is money only.
 
