@@ -456,7 +456,7 @@ switching, once per low) → `InUseAnnouncer`. *A link* —
 
 | A contributor wants… | They change |
 |---|---|
-| In use for another CLI whose logins are folders | its definition's `accounts.signIn` and `accounts.cli.folderVariable` — nothing else |
+| In use for another CLI whose logins are folders | its definition's `accounts.signIn` and `accounts.cli.environment.set` — nothing else |
 | another shell | one case in `LoginShell`, its lines in `ShellSetup`, a test that runs it |
 | another policy than *Switch when low* | a policy beside `SwitchWhenLow` that `InUse.review` asks |
 | In use for API-key providers | an env-variable record and lines — `InUse` and `NewSessions` unchanged |

@@ -17,7 +17,7 @@ User guide: [README.md](README.md). Mockup: `design-concept/in-use/index.html`.
 
 **New sessions of a CLI start on the login whose folder is recorded for it; ClaudeBar records it, the shell reads it, and nothing else moves.**
 
-In use is a **capability** ([CANONICAL §2.1](../../architecture/CANONICAL_MODEL.md#21--what-a-provider-owns-what-it-offers-and-what-it-isnt)): declared by `accounts.signIn` (the variable it writes is `accounts.cli.folderVariable`), reached as `provider.inUse` (`nil` when not declared), never a flag on `Provider`. Pieces and flows: [TARGET §9](../../architecture/TARGET_ARCHITECTURE.md#9--in-use-as-a-capability).
+In use is a **capability** ([CANONICAL §2.1](../../architecture/CANONICAL_MODEL.md#21--what-a-provider-owns-what-it-offers-and-what-it-isnt)): declared by `accounts.signIn` (the lines it writes are `accounts.cli.environment.set`), reached as `provider.inUse` (`nil` when not declared), never a flag on `Provider`. Pieces and flows: [TARGET §9](../../architecture/TARGET_ARCHITECTURE.md#9--in-use-as-a-capability).
 
 ```
  views · claudebar://use · notification button          (render and tell — decide nothing)
@@ -51,7 +51,7 @@ Provider
 └── inUse: InUse?  ◆                  nil unless accounts.signIn is declared and a record exists
     ├── login: Account                the plain login until another is chosen
     ├── logins: [Account]             the plain login + folder logins; offersChoice when > 1
-    ├── command: TerminalCommand ◇    cli + accounts.cli.folderVariable
+    ├── command: TerminalCommand ◇    cli + accounts.cli.environment.set
     ├── use(_) · forget(_)            forget is told by Provider.remove
     ├── worthSwitchingTo: Account?
     ├── review() → InUseNotice?       switched, or worth switching — told once per low

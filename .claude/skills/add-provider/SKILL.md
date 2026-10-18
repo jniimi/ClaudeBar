@@ -114,7 +114,7 @@ the background-refresh floor), `context` (JSON files the mapping may read),
 - `{{setting.region.host}}` fills any string of the definition; a blank setting leaves its template unfilled (a script's `values` drop it).
 - `scope: "account"` is what *Add Account* asks for; `"for": [kind]` asks only while that data source is active, and a login without such a value runs only the sources that don't need it.
 - **This Mac is the default login's.** Write every read once, for any login: a read that uses an account value (`{{account.folder}}/…`, an account-scope `setting`) is each login's own; any other (an environment variable, a fixed path or Keychain name, browser cookies, a local database or log) is this Mac's, and an added login leaves it out by itself. There is no `accounts.patch`; a definition that forgets nothing can't leak. Every account value needs a default for the default login (`folder.default`, the setting's `default`, a `derived` value's `default`).
-- `accounts.folder` (`default`, `accountId.field`, `derived`, `notSignedIn`), `accounts.signIn` (`args`) and `accounts.cli` (`folderVariable`, `set`, `unset`, `args`: how the CLI runs as an added login) — [multi-account design](../../../docs/features/multi-account/design.md#what-a-login-reads--this-mac-is-the-default-logins).
+- `accounts.folder` (`default`, `accountId.field`, `derived`, `notSignedIn`), `accounts.signIn` (`args`) and `accounts.cli` (`environment` `{set, unset}` as a CLI fetch writes it, and `args`: how the CLI runs as an added login) — [multi-account design](../../../docs/features/multi-account/design.md#what-a-login-reads--this-mac-is-the-default-logins).
 
 ### The JSON mapping
 

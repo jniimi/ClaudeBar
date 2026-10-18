@@ -158,8 +158,10 @@ an added login; that is the default.
   },
   "signIn": { "args": ["login"] },                  // "Sign in with browser": the vendor's login command
   "cli": {                                          // how the CLI runs as an added login:
-    "folderVariable": "CODEX_HOME",                 //   the variable that points it at {{account.folder}}
-    "unset": ["OPENAI_API_KEY", "…"],               //   blind to this Mac's login
+    "environment": {                                //   the shape a CLI fetch already uses
+      "set":   { "CODEX_HOME": "{{account.folder}}" },   // pointed at its folder
+      "unset": ["OPENAI_API_KEY", "…"]              //   blind to this Mac's login
+    },
     "args": ["-c", "cli_auth_credentials_store=\"file\""]   // keep the login in the folder
   }
 }
@@ -172,9 +174,8 @@ an added login; that is the default.
 | `folder.derived` | a value worked out from the folder (`prefix` + `sha256` of its path, or the folder itself), with the `default` the vendor uses when no folder is set |
 | `folder.notSignedIn` | optional; what to do differs per vendor |
 | `signIn.args` | the vendor's login command; its program is the definition's `cli`, its environment `accounts.cli` |
-| `cli.folderVariable` | the one variable that points the vendor's CLI at a folder (`CODEX_HOME`, `CLAUDE_CONFIG_DIR`). Fetch, refresh and sign-in set it to `{{account.folder}}`, and *In use* writes it into the person's shell |
-| `cli.set` | optional: other variables the CLI needs pointed at the folder (Kiro: `KIRO_HOME`, `XDG_*`) |
-| `cli.unset` · `cli.args` | this Mac's variables that would beat the folder; arguments that keep the login inside it. Said once, applied to every CLI run of an added login. The default login's CLI runs as it always has |
+| `cli.environment.set` | the variables that point the vendor's CLI at the folder — `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, or Kiro's `HOME` and `XDG_*` — written as a CLI fetch's `environment` already is. Fetch, refresh and sign-in run with them, and *In use* writes the same lines into the person's shell |
+| `cli.environment.unset` · `cli.args` | this Mac's variables that would beat the folder; arguments that keep the login inside it. Said once, applied to every CLI run of an added login. The default login's CLI runs as it always has |
 
 Gone: `accounts.patch`; `folder.savedAs` and `accountId.savedAs` — an added
 folder login's folder is always `folder` and its id `accountId`, and values saved
@@ -222,7 +223,7 @@ diff:
 | **added account** | a login beside it; id `<provider>.<acct>` | a copy of the provider |
 | **account values** | the account-scope settings that fill `{{account.x}}` — a folder, a login id, a region. Each has a default, which is the default login's | secrets |
 | **this Mac** | what every program on the Mac sees: environment variables, fixed paths, fixed Keychain names, browser cookies, local databases and logs. The default login's, never an added one's | the default login's folder, which is one of its values |
-| **folder** (the account value) | the folder a login lives in, `{{account.folder}}` — a signed-in folder for an added login, `folder.default` for the default one. The vendor's own word for it (`CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `GEMINI_CLI_HOME`) is only the CLI's `folderVariable` | `$HOME` |
+| **folder** (the account value) | the folder a login lives in, `{{account.folder}}` — a signed-in folder for an added login, `folder.default` for the default one. The vendor's own word for it (`CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `GEMINI_CLI_HOME`) appears only in `accounts.cli.environment.set` | `$HOME` |
 | **account secret** | an account-scope secret (an API key) — a *name*, its value in the vault under that account | a value in `settings.json` |
 | **way to add** (`accounts.ways`) | how the definition lets a person add one — the keys it has: `signIn` · `folder` · `form` | a data source kind |
 | **signed-in folder** | the folder an added login lives in, and who made it — the person, or ClaudeBar by signing in. Put [*in use*](../in-use/design.md), the person's terminal starts on it too | the default login's folder |
@@ -258,7 +259,7 @@ Monitor ◆                                  the menu bar's root
          │       │                           NEW folder, then the folder rule checks it
          │       │     folder(rule)          "Choose Signed-in Folder" — read who is signed in there
          │       │     form                  fill the form's ACCOUNT-scope settings (slice 5)
-         │       └── cli                   how the CLI runs as an added login — folderVariable, set, unset, args
+         │       └── cli                   how the CLI runs as an added login — environment {set, unset}, args
          │                                 (what an added login reads is not written here: it is
          │                                  every read that uses an account value — § What a login reads)
          ├── settingsForm ◇                [Setting], each with a SCOPE: provider | account
