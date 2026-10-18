@@ -16,7 +16,11 @@ A provider is **data**: one file, `Modules/Providers/Resources/Providers/<id>.js
 bundle (and in `~/.claudebar/providers`, `~/.claudebar/extensions`) and makes
 each on one shared `Engine` ([TARGET_ARCHITECTURE §10](../../../docs/architecture/TARGET_ARCHITECTURE.md#10--a-definition-on-disk-is-a-provider)).
 There is no registration step and no Swift line that names it.
-It says where the key is, how to fetch, and how to read the answer. One
+It is an abstraction layer that answers three questions, each once: **who the
+provider is** (`profile`), **how an account is signed in** (`settings`, and
+`accounts` when the vendor keeps a login in a folder), and **how to get its
+usage** (`dataSources`: where the key is, how to fetch, how to read the
+answer). One
 `Provider` class and one `DataSource` type run every definition. **You write
 no Swift for a vendor**: no `XxxProvider`, no `XxxUsageProbe`, no
 `XxxCredentialLoader`.
@@ -92,10 +96,10 @@ the user to confirm before writing code.
 Per data source, also: `errors` (`http.<status>`, `http.default`,
 `cli.missing`, `cli.nonzero`, `cli.failed` → a reason; a 429 is always a rate
 limit), `fallbackOn` (hand-off by failure tag), `fallback`, `cache.ttl` (also
-the background-refresh floor), `context` (JSON files the mapping may read),
-`recover.patchJSONFile`, `requiresFiles`, `identity` (an added folder account's comes from `accounts.folder.signedInAs`),
-`verifyBeforeBackground`. Per provider: `links.dashboardByPlan` and `accounts`
-(added logins, see `codex.json`).
+the background-refresh floor), `context` (other JSON files the mapping may read),
+`recover.patchJSONFile`, `requiresFiles`, `verifyBeforeBackground`. Per
+provider: `links.dashboardByPlan` and `accounts` (below). Who is signed in is
+never written per data source: it is `accounts.folder.signedInAs`, said once.
 
 ### Settings and added accounts
 
@@ -113,8 +117,53 @@ the background-refresh floor), `context` (JSON files the mapping may read),
 - A kind owns its rule: `secret` (to the Keychain, fills nothing), `choice` (its options carry values), `path` (`mustExist`), `text` (`pattern`).
 - `{{setting.region.host}}` fills any string of the definition; a blank setting leaves its template unfilled (a script's `values` drop it).
 - `scope: "account"` is what *Add Account* asks for; `"for": [kind]` asks only while that data source is active, and a login without such a value runs only the sources that don't need it.
-- **An account shows only what its own sign-in reaches.** Write every read once, for any account: a read that names the account (`{{account.folder}}/…`, a pasted `setting`) is each account's own; any other (an environment variable, a fixed path or Keychain name, browser cookies, a local database or log) is this Mac's — the default account's, which is signed in here — and an added account leaves it out by itself. There is no `accounts.patch`; a definition that forgets nothing can't leak. The default login's folder is `folder.default` (or the setting's `default`); where a vendor keeps the default login elsewhere, write both places where they are read (a path list, `{{account.folder#sha256.8}}`).
-- `accounts.folder` (`default`, `signedInAs` — the file that says who is signed in and its `id`, `email`, … — `notSignedIn`), `accounts.signIn` (`args`) and `accounts.cli` (`environment` `{set, unset}` as a CLI fetch writes it, and `args`: how the CLI runs as an added login) — [multi-account design](../../../docs/features/multi-account/design.md#what-an-accounts-sign-in-reaches).
+
+### Added accounts: what an account's sign-in reaches
+
+**An account shows only what its own sign-in reaches** ([multi-account design](../../../docs/features/multi-account/design.md#what-an-accounts-sign-in-reaches)).
+The default account is signed in on this Mac. An added account is signed in
+through what the person gave it: a key, a folder, or both. Write every read
+**once, for any account**:
+
+- A read that **names the account** is each account's own: `{{account.<id>}}`
+  (a folder setting, `{{account.folder}}`) or a `{ "setting": … }` lookup.
+- Any other read (an environment variable, a fixed path or Keychain name,
+  browser cookies, an app's own database, a log at a fixed place) is **this
+  Mac's**: the default account makes it, and an added account leaves it out by
+  itself. There is no `accounts.patch`; forgetting a read can't leak.
+- A folder an account was given, and a read uses, must still be there, or that
+  account is *not signed in*.
+
+| The vendor keeps a login… | You write |
+|---|---|
+| as a **key** the person can paste (API key, session token, cookie) | an account-scope `secret` setting, and `{ "setting": "<id>" }` somewhere in the lookup chain (append it; keep the default account's order). **No `accounts` block** |
+| in a **folder** the person names on the form | an account-scope `path` setting with the vendor's default folder (`"default": "~/.grok"`), reads under `{{account.<id>}}`; `accounts.cli` only if a CLI must be pointed at it |
+| in a **folder ClaudeBar checks** (Choose Signed-in Folder, Sign in with browser) | `accounts.folder` and `accounts.signIn`, reads under `{{account.folder}}`, and `accounts.cli` |
+| as a key the **CLI** takes | two data sources: one with the account's key handed to the CLI (`{{token}}` in its environment), falling back on `authenticationRequired` to one that runs the CLI as its own login, which is this Mac's (`ampcode.json`) |
+
+```jsonc
+"accounts": {
+  "folder": {
+    "default": "${CODEX_HOME:-~/.codex}",           // where the vendor keeps the default account's login
+    "signedInAs": {                                 // "Signed in as …": read once, for every data source
+      "file": "{{account.folder}}/auth.json",       // a list where the vendor keeps the default elsewhere
+      "id": "$.tokens.account_id",                  // checked before and after every fetch of an added account
+      "email": "$.tokens.id_token#jwt.email"        // the pill's; a mapping reads any field as $signedInAs.<field>
+    },
+    "notSignedIn": "…"                              // optional
+  },
+  "signIn": { "args": ["login"] },                  // the vendor's login; its program is "cli"
+  "cli": {                                          // every CLI run of an added account: fetch, renewal, sign-in
+    "environment": { "set": { "CODEX_HOME": "{{account.folder}}" }, "unset": ["OPENAI_API_KEY"] },
+    "args": ["-c", "cli_auth_credentials_store=\"file\""]
+  }
+}
+```
+
+Where the vendor keeps the default account somewhere else, write both places
+where they are read: a path list (`["{{account.folder}}/.claude.json",
+"${CLAUDE_CONFIG_DIR:-~}/.claude.json"]`) or a name worked out from the folder
+(`"Claude Code-credentials-{{account.folder#sha256.8}}"`).
 
 ### The JSON mapping
 
@@ -144,8 +193,8 @@ the background-refresh floor), `context` (JSON files the mapping may read),
 
 Paths: `$.a.b` from the root, `a.b` from the current object, `$header.x`, `$key`
 (the map key inside `each`), `$credential.x` (a non-secret credential value),
-`$context.file.field` (a field of a `context` file the data source reads, such as
-the email a tool keeps in its own account file).
+`$signedInAs.field` (who is signed in: a field of `accounts.folder.signedInAs`),
+`$context.file.field` (a field of another `context` file the data source reads).
 A list of values means *the first that answers*; a number is a constant.
 
 ## TDD workflow (Chicago school)
@@ -202,6 +251,23 @@ struct AcmeDefinitionTests {
 Assert on **state**: the usage, `lastError`, `lastFailedStep`, `answeredBy`, and
 files written back. Don't `verify()` calls. Cover every fixture from step 1.
 
+When a provider can have an added account, test that it reaches only its own
+sign-in. `definition.dataSources(forAccount:)` is what an added account runs; a
+test reading a built-in data source for the default account uses
+`definition.asDefaultAccount(kind)` (`Tests/Support/DefaultAccount.swift`), since
+`{{account.x}}` is only filled for an account:
+
+```swift
+@Test
+func `should never read this Mac's key for an added account`() throws {
+    let acme = try ProviderFactory.builtIn("acme")
+
+    let added = try #require(try acme.dataSources(forAccount: [:]).first)
+
+    #expect(added.credential == .firstOf([.setting("apiKey")]))   // ACME_API_KEY is this Mac's
+}
+```
+
 ### 3 · Write the definition (green)
 Add `<id>.json` until the golden tests pass. `ProviderFactory.builtIn` validates it:
 kinds are unique, and the default and every fallback name an existing kind.
@@ -252,6 +318,7 @@ never a branch:
 - a setting under another key → `JSONSettingsRepository.legacySettingKeys`
 - a setting in UserDefaults → `JSONSettingsRepository.legacyDefaultsKeys` (a saved number or list reads as text)
 - a secret in UserDefaults or an older Keychain item → `ProviderVault.legacyKeys`
+- an added account's value under an older name (`codexHome` → `folder`) → `JSONSettingsRepository.renamedAccountValues`
 
 Each moves to its new place the first time it's saved, and each needs a test.
 
@@ -261,6 +328,7 @@ Each moves to its new place the first time it's saved, and each needs a test.
 - [ ] Golden tests written first and failing
 - [ ] `<id>.json` makes them pass; no vendor-named Swift anywhere
 - [ ] Any new mapping/fetch/lookup ability added generically to `DataSources`, test-first, and listed in ENGINE_DESIGN §1
+- [ ] An added account reaches only its own sign-in: its key is an account-scope setting in the lookup chain, folder reads name `{{account.x}}`, and a test checks `dataSources(forAccount:)`
 - [ ] `"order"` set if it has a place in the default lineup, and its id in `DetectionTests`
 - [ ] `profile.look` filled in and the icon added to the asset catalog
 - [ ] Provider docs, its row in the root `README.md` Providers table, its landing-page tile and counts (`npm test` in `website/`), and the CHANGELOG line written; docs check passes
