@@ -100,7 +100,7 @@ struct AntigravityDefinitionTests {
         #expect(request.value(forHTTPHeaderField: "X-Codeium-Csrf-Token") == "9f808dbe-cb96-4829")
     }
 
-    @Test(.needsLocalServer) func `should show Argon's weekly pool when Antigravity reports it`() async throws {
+    @Test(.needsLocalServer) func `should show the separately reported weekly model pool`() async throws {
         let provider = try make(answers: ["RetrieveUserQuotaSummary": (200, #"{"response":\#(Self.summaryWithArgon)}"#)])
         let quotas = try await provider.refreshPlain().quotas
         #expect(quotas.map(\.quotaType) == [.session, .weekly, .modelSpecific("Claude"), .modelSpecific("Claude Weekly"), .modelSpecific("Argon Weekly")])
