@@ -4,7 +4,7 @@ description: Track Antigravity's Gemini and Claude-and-others quota pools (5-hou
 
 # Antigravity
 
-Shows Google Antigravity's two shared quota pools: **Gemini**, and **Claude & others** (every model that isn't Gemini). Each pool has a 5-hour and a weekly window. In the menu bar they appear as "Gemini", "Gemini Weekly", "Claude" and "Claude Weekly". Older Antigravity builds that don't report pools show a quota for each model instead.
+Shows Google Antigravity's shared quota pools: **Gemini**, **Claude & others** (every model that isn't Gemini), and **Gemini 4 Argon** when Antigravity reports it as a separate weekly pool. The Gemini and Claude pools each have a 5-hour and a weekly window; Argon has a weekly window (`Argon Weekly`). Older Antigravity builds that don't report pools show a quota for each model instead.
 
 ## Setup
 

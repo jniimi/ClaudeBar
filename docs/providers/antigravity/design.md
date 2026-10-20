@@ -52,6 +52,7 @@ Antigravity is `Modules/Providers/Resources/Providers/antigravity.json` and `ant
 | `gemini-weekly` | weekly | Gemini | 7d | Gemini Weekly |
 | `3p-5h` | model "Claude" | Claude & others | 5h | Claude |
 | `3p-weekly` | model "Claude Weekly" | Claude & others | 7d | Claude Weekly |
+| `gemini-argon-wtu-weekly` | model "Argon Weekly" | Gemini 4 Argon | 7d | Argon Weekly |
 
 - Buckets without a usable `remainingFraction` are dropped rather than reported as 0%. The legacy per-model parsers do the opposite: a missing `remainingFraction` there means the quota is used up.
 - If the result isn't a summary at all, fall back to the legacy endpoints. A parsed summary, even an empty one, is final.

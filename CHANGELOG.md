@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Antigravity, Gemini 4 Argon**: shows the separate weekly quota pool for Gemini 4 Argon (`ARGON WEEKLY`) when reported by Antigravity. ([#591](https://github.com/tddworks/ClaudeBar/pull/591)) → [docs](https://github.com/tddworks/ClaudeBar/blob/main/docs/providers/antigravity/README.md)
+
 ---
 
 ## [0.5.17] - 2026-10-19
